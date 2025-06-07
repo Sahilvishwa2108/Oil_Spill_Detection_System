@@ -1,0 +1,46 @@
+{
+  "vercel_frontend": {
+    "platform": "Vercel (Frontend)",
+    "steps": [
+      "1. Install Vercel CLI: npm install -g vercel",
+      "2. Navigate to frontend directory",
+      "3. Run: vercel --prod",
+      "4. Set environment variable: NEXT_PUBLIC_API_URL=<backend_url>",
+      "5. Deploy: vercel --prod"
+    ],
+    "env_vars": {
+      "NEXT_PUBLIC_API_URL": "https://your-backend-url.railway.app"
+    }
+  },
+  "railway_backend": {
+    "platform": "Railway (Backend)",
+    "steps": [
+      "1. Install Railway CLI: npm install -g @railway/cli",
+      "2. Login: railway login",
+      "3. Navigate to backend directory",
+      "4. Initialize: railway create",
+      "5. Deploy: railway up",
+      "6. Set environment variables as needed"
+    ],
+    "files_needed": [
+      "railway.json",
+      "requirements.txt",
+      "main.py"
+    ]
+  },
+  "docker_deployment": {
+    "platform": "Docker Compose",
+    "steps": [
+      "1. Ensure Docker is installed",
+      "2. Navigate to project root",
+      "3. Build: docker-compose build",
+      "4. Run: docker-compose up -d",
+      "5. Access: Frontend http://localhost:3000, Backend http://localhost:8000"
+    ],
+    "files_needed": [
+      "docker-compose.yml",
+      "backend/Dockerfile",
+      "frontend/Dockerfile"
+    ]
+  }
+}

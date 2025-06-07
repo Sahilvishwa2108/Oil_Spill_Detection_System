@@ -1,0 +1,163 @@
+# Root .gitignore for Oil Spill Detection Project
+
+# Operating System
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Build outputs
+dist/
+build/
+out/
+
+# Dependencies
+node_modules/
+
+# Python specific (for backend)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# Models and large files (if you want to exclude them)
+# *.h5
+# *.pkl
+# *.model
+
+# Model files - too large for Git (exclude from version control)
+backend/models/*.h5
+backend/models/*.pkl
+backend/models/*.joblib
+backend/models/*.pt
+backend/models/*.pth
+backend/models/*.onnx
+backend/models/*.model
+
+# Uploads and temporary data
+uploads/*
+!uploads/.gitkeep
+
+# Test files that shouldn't be committed
+test_*.py
+debug_*.py
+*_test.py
+integration_test.py
+
+# Docker
+.dockerignore
+
+# Cloud deployment files with secrets
+# (Keep the template files, exclude files with actual keys)
+azure-credentials.json
+gcp-credentials.json
+aws-credentials.json
+
+# Backup files
+*.bak
+*.backup
+
+# Additional ML & Azure specific items
+# TensorFlow/Keras specific
+*.h5.backup
+*.h5.bak
+tensorboard_logs/
+tf_logs/
+wandb/
+
+# Azure specific
+.azure/
+azure-pipelines.yml.backup
+*.azurewebsites.net
+
+# Additional Python patterns
+*.egg-info/
+.Python
+*.egg
+MANIFEST
+
+# Additional temporary files
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Package managers
+yarn.lock
+package-lock.json
+poetry.lock
+
+# Additional OS files
+*.tmp
+*.swp
+*.swo
+.directory
+desktop.ini
+
+# Security sensitive files
+secrets.json
+config.json
+credentials.json

@@ -1,0 +1,15 @@
+{
+  "name": "oil-spill-detection-backend",
+  "build": {
+    "commands": [
+      "pip install -r requirements.txt"
+    ]
+  },
+  "run": {
+    "command": "uvicorn main:app --host 0.0.0.0 --port $PORT"
+  },
+  "env": {
+    "ENVIRONMENT": "production",
+    "API_HOST": "0.0.0.0"
+  }
+}
