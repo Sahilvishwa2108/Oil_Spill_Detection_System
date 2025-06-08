@@ -14,9 +14,15 @@ import json
 import base64
 from datetime import datetime
 import logging
+from dotenv import load_dotenv
+
+# Load environment variables
+env_file = ".env.production" if os.getenv("ENVIRONMENT") == "production" else ".env.local"
+load_dotenv(env_file)
 
 # Configure logging
-logging.basicConfig(level=logging.INFO)
+log_level = os.getenv("LOG_LEVEL", "INFO")
+logging.basicConfig(level=getattr(logging, log_level))
 logger = logging.getLogger(__name__)
 
 # Create FastAPI app
@@ -26,10 +32,14 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# Get CORS origins from environment
+cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+cors_origins = [origin.strip() for origin in cors_origins]
+
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://your-frontend-domain.vercel.app"],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

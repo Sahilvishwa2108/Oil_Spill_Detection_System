@@ -17,6 +17,15 @@ A production-ready machine learning dashboard for detecting oil spills in satell
 - **Real-time Analytics**: Performance metrics and model statistics
 - **Modern UI**: Built with Tailwind CSS, Radix UI, and Framer Motion
 
+## 🌐 Live Demo
+
+🚀 **Try the live application:**
+- 📱 **Frontend Dashboard:** [https://oil-spill-detection.vercel.app](https://oil-spill-detection.vercel.app)
+- 🔧 **Backend API:** [https://oil-spill-backend.azurewebsites.net](https://oil-spill-backend.azurewebsites.net)
+- 📚 **API Documentation:** [https://oil-spill-backend.azurewebsites.net/docs](https://oil-spill-backend.azurewebsites.net/docs)
+
+*Note: Replace with your actual deployment URLs*
+
 ## 🏗️ Architecture
 
 ```

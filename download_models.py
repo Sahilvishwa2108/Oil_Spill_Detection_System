@@ -9,16 +9,22 @@ import requests
 from pathlib import Path
 import sys
 
-# Model URLs (replace with your actual model storage URLs)
-MODEL_URLS = {
-    "deeplab_final_model.h5": "https://your-cloud-storage.com/models/deeplab_final_model.h5",
-    "unet_final_model.h5": "https://your-cloud-storage.com/models/unet_final_model.h5"
+# Hugging Face model repository
+HUGGINGFACE_REPO = os.getenv("HUGGINGFACE_REPO", "sahilvishwa2108/oil-spill-detection-models")
+
+# Model files to download from Hugging Face
+MODEL_FILES = {
+    "deeplab_final_model.h5": "deeplab_final_model.h5",
+    "unet_final_model.h5": "unet_final_model.h5"
 }
 
-def download_model(url: str, filename: str, models_dir: Path) -> bool:
-    """Download a model file from URL"""
+def download_model(repo: str, filename: str, models_dir: Path) -> bool:
+    """Download a model file from Hugging Face Hub"""
     try:
-        print(f"Downloading {filename}...")
+        # Construct Hugging Face download URL
+        url = f"https://huggingface.co/{repo}/resolve/main/{filename}"
+        
+        print(f"Downloading {filename} from Hugging Face...")
         response = requests.get(url, stream=True)
         response.raise_for_status()
         
@@ -42,29 +48,28 @@ def main():
     
     print("🤖 Oil Spill Detection - Model Downloader")
     print("=" * 50)
-    
-    # Check if models already exist
-    all_exist = all((models_dir / filename).exists() for filename in MODEL_URLS.keys())
+      # Check if models already exist
+    all_exist = all((models_dir / filename).exists() for filename in MODEL_FILES.keys())
     if all_exist:
         print("✅ All models already downloaded!")
         return
     
     # Download missing models
     success_count = 0
-    for filename, url in MODEL_URLS.items():
-        model_path = models_dir / filename
+    for local_filename, remote_filename in MODEL_FILES.items():
+        model_path = models_dir / local_filename
         if model_path.exists():
-            print(f"⏭️  {filename} already exists, skipping...")
+            print(f"⏭️  {local_filename} already exists, skipping...")
             success_count += 1
             continue
             
-        if download_model(url, filename, models_dir):
+        if download_model(HUGGINGFACE_REPO, remote_filename, models_dir):
             success_count += 1
     
-    if success_count == len(MODEL_URLS):
-        print(f"\n🎉 Successfully downloaded all {len(MODEL_URLS)} models!")
+    if success_count == len(MODEL_FILES):
+        print(f"\n🎉 Successfully downloaded all {len(MODEL_FILES)} models!")
     else:
-        print(f"\n⚠️  Downloaded {success_count}/{len(MODEL_URLS)} models")
+        print(f"\n⚠️  Downloaded {success_count}/{len(MODEL_FILES)} models")
         sys.exit(1)
 
 if __name__ == "__main__":
