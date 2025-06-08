@@ -1,4 +1,6 @@
-# Oil Spill Detection API - Azure Deployment v2.1
+# Oil Spill Detection API - Updated for Azure deployment
+# This FastAPI application provides endpoints for oil spill detection using deep learning models
+
 import os
 import io
 import numpy as np
