@@ -1,0 +1,113 @@
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+# More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
+
+name: Build and deploy Python app to Azure Web App - oil-spill-backend
+
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read #This is required for actions/checkout
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python version
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Create and start virtual environment
+        run: |
+          python -m venv venv
+          source venv/bin/activate
+      
+      - name: Install dependencies
+        run: |
+          cd backend
+          pip install -r requirements.txt
+        
+      - name: Create production environment file
+        run: |
+          cd backend
+          cat > .env.production << EOF
+          ENVIRONMENT=production
+          DEBUG=False
+          API_HOST=0.0.0.0
+          API_PORT=8000
+          MODEL_PATH=./models
+          HUGGINGFACE_REPO=sahilvishwa2108/oil-spill-detection-models
+          MAX_FILE_SIZE=10485760
+          ALLOWED_EXTENSIONS=png,jpg,jpeg,gif,bmp,tiff
+          CORS_ORIGINS=https://oil-spill-detection.vercel.app,https://oil-spill-frontend.vercel.app,https://oil-spill-backend-h3c9bcb8h6afh0h5.centralindia-01.azurewebsites.net
+          LOG_LEVEL=INFO
+          WEBSITE_PORT=8000
+          EOF
+
+      # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
+      - name: Test backend functionality
+        run: |
+          cd backend
+          python -c "
+          import tensorflow as tf
+          import fastapi
+          import uvicorn
+          print('✅ All Python dependencies installed successfully')
+          print(f'TensorFlow: {tf.__version__}')
+          print(f'FastAPI: {fastapi.__version__}')
+          "
+
+      - name: Zip artifact for deployment
+        run: |
+          cd backend
+          zip -r ../release.zip . -x "*.pyc" "__pycache__/*" "*.git*"
+
+      - name: Upload artifact for deployment jobs
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-app
+          path: |
+            release.zip
+            !venv/
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: 'Production'
+      url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
+    permissions:
+      id-token: write #This is required for requesting the JWT
+      contents: read #This is required for actions/checkout
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: python-app
+
+      - name: Unzip artifact for deployment
+        run: unzip release.zip
+
+      
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_A6A29685974C410981E10B1F64FC79A8 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_E3E862122FF64719B4C05E8B148C6226 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_B7DEAD1BD56A4855A4452FE1CC94CE98 }}
+
+      - name: 'Deploy to Azure Web App'
+        uses: azure/webapps-deploy@v3
+        id: deploy-to-webapp
+        with:
+          app-name: 'oil-spill-backend'
+          slot-name: 'Production'
+          
