@@ -24,16 +24,6 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Create and start virtual environment
-        run: |
-          python -m venv venv
-          source venv/bin/activate
-      
-      - name: Install dependencies
-        run: |
-          cd backend
-          pip install -r requirements.txt
-        
       - name: Create production environment file
         run: |
           cd backend
@@ -51,31 +41,18 @@ jobs:
           WEBSITE_PORT=8000
           EOF
 
-      # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
-      - name: Test backend functionality
+      # Test Python syntax only, don't install dependencies (let Azure do that)
+      - name: Test Python syntax
         run: |
           cd backend
-          python -c "
-          import tensorflow as tf
-          import fastapi
-          import uvicorn
-          print('✅ All Python dependencies installed successfully')
-          print(f'TensorFlow: {tf.__version__}')
-          print(f'FastAPI: {fastapi.__version__}')
-          "
-
-      - name: Zip artifact for deployment
-        run: |
-          cd backend
-          zip -r ../release.zip . -x "*.pyc" "__pycache__/*" "*.git*"
+          python -m py_compile main.py
+          echo "✅ Python syntax check passed"
 
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
         with:
           name: python-app
-          path: |
-            release.zip
-            !venv/
+          path: backend/
 
   deploy:
     runs-on: ubuntu-latest
@@ -93,10 +70,6 @@ jobs:
         with:
           name: python-app
 
-      - name: Unzip artifact for deployment
-        run: unzip release.zip
-
-      
       - name: Login to Azure
         uses: azure/login@v2
         with:
