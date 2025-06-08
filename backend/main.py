@@ -23,8 +23,15 @@ import sys
 import subprocess
 
 # Load environment variables
-env_file = ".env.production" if os.getenv("ENVIRONMENT") == "production" else ".env.local"
-load_dotenv(env_file)
+# Priority: Railway > Local > Default
+env_file = ".env.local"
+if os.path.exists(".env.railway"):
+    env_file = ".env.railway"
+elif os.getenv("ENVIRONMENT") == "production":
+    env_file = None  # Use environment variables directly in production
+    
+if env_file:
+    load_dotenv(env_file)
 
 # Configure logging
 log_level = os.getenv("LOG_LEVEL", "INFO")

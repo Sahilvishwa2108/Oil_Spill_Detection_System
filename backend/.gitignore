@@ -25,11 +25,12 @@ venv.bak/
 htmlcov/
 .tox/
 
-# Models (uncomment if models are large and stored separately)
-# *.h5
-# *.pkl
-# *.joblib
-# *.model
+# Models (downloaded from Hugging Face during deployment)
+*.h5
+*.pkl
+*.joblib
+*.model
+models/
 
 # Uploads directory (keep structure, ignore contents)
 uploads/*
