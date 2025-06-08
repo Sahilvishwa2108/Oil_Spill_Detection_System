@@ -1,3 +1,4 @@
+# Oil Spill Detection API - Azure Deployment v2.1
 import os
 import io
 import numpy as np
