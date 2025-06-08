@@ -6,26 +6,48 @@ on:
   pull_request:
     branches: [ main, master ]
 
+env:
+  PYTHON_VERSION: '3.10'
+  NODE_VERSION: '18'
+
 jobs:
   test:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
     
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: ${{ env.PYTHON_VERSION }}
     
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: ${{ env.NODE_VERSION }}
+    
+    - name: Cache Python dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+    
+    - name: Cache Node modules
+      uses: actions/cache@v3
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-
     
     - name: Install Python dependencies
       run: |
         cd backend
+        pip install --upgrade pip
         pip install -r requirements.txt
     
     - name: Install Node.js dependencies
@@ -33,11 +55,17 @@ jobs:
         cd frontend
         npm ci
     
-    - name: Run backend tests
+    - name: Test Python imports
       run: |
         cd backend
-        # Add your backend tests here
-        python -c "import tensorflow as tf; print('TensorFlow version:', tf.__version__)"
+        python -c "
+        import tensorflow as tf
+        import fastapi
+        import uvicorn
+        print('✅ All Python dependencies installed successfully')
+        print(f'TensorFlow: {tf.__version__}')
+        print(f'FastAPI: {fastapi.__version__}')
+        "
     
     - name: Build frontend
       run: |
@@ -50,12 +78,24 @@ jobs:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
     
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
     
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: ${{ env.PYTHON_VERSION }}
+    
+    - name: Create production environment file
+      run: |
+        cd backend
+        cat > .env.production << EOF
+        ENVIRONMENT=production
+        CORS_ORIGINS=https://oil-spill-frontend.vercel.app,https://oil-spill-detection.vercel.app
+        LOG_LEVEL=INFO
+        HUGGINGFACE_REPO=sahilvishwa2108/oil-spill-detection-models
+        PORT=8000
+        EOF
     
     - name: Login to Azure
       uses: azure/login@v1

@@ -15,6 +15,9 @@ import base64
 from datetime import datetime
 import logging
 from dotenv import load_dotenv
+import requests
+import sys
+import subprocess
 
 # Load environment variables
 env_file = ".env.production" if os.getenv("ENVIRONMENT") == "production" else ".env.local"
@@ -44,6 +47,33 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+def download_models_from_huggingface():
+    """Download models from Hugging Face Hub in production"""
+    try:
+        logger.info("Downloading models from Hugging Face...")
+        
+        # Create models directory if it doesn't exist
+        os.makedirs("models", exist_ok=True)
+        
+        # Use local download script
+        download_script = "download_models.py"
+        if os.path.exists(download_script):
+            result = subprocess.run([sys.executable, download_script], 
+                                  capture_output=True, text=True)
+            if result.returncode == 0:
+                logger.info("Models downloaded successfully from Hugging Face")
+                logger.info(result.stdout)
+                return True
+            else:
+                logger.error(f"Error downloading models: {result.stderr}")
+                return False
+        else:
+            logger.warning("Download script not found, using dummy models")
+            return False
+    except Exception as e:
+        logger.error(f"Error downloading models: {str(e)}")
+        return False
 
 # Global variables for models
 model1 = None
@@ -76,6 +106,17 @@ def load_models():
     try:
         models_dir = "models"
         
+        # In production, try to download models first if they don't exist
+        if os.getenv("ENVIRONMENT") == "production":
+            deeplab_path = os.path.join(models_dir, "deeplab_final_model.h5")
+            unet_path = os.path.join(models_dir, "unet_final_model.h5")
+            
+            if not (os.path.exists(deeplab_path) and os.path.exists(unet_path)):
+                logger.info("Models not found locally, downloading from Hugging Face...")
+                download_success = download_models_from_huggingface()
+                if not download_success:
+                    logger.warning("Failed to download models, will use dummy models")
+        
         # Try to load DeepLab model
         deeplab_path = os.path.join(models_dir, "deeplab_final_model.h5")
         if os.path.exists(deeplab_path):
@@ -87,6 +128,9 @@ def load_models():
                 # Create a simple dummy model for demonstration
                 model1 = create_dummy_model((256, 256, 3), "deeplab")
                 logger.info("Using dummy DeepLab model for demonstration")
+        else:
+            logger.warning("DeepLab model file not found, using dummy model")
+            model1 = create_dummy_model((256, 256, 3), "deeplab")
         
         # Try to load U-Net model  
         unet_path = os.path.join(models_dir, "unet_final_model.h5")
@@ -99,7 +143,10 @@ def load_models():
                 # Create a simple dummy model for demonstration
                 model2 = create_dummy_model((256, 256, 3), "unet")
                 logger.info("Using dummy U-Net model for demonstration")
-                
+        else:
+            logger.warning("U-Net model file not found, using dummy model")
+            model2 = create_dummy_model((256, 256, 3), "unet")
+    
     except Exception as e:
         logger.error(f"Error in load_models: {str(e)}")
         # Create dummy models as fallback
