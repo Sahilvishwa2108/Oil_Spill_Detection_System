@@ -23,11 +23,11 @@ COPY . .
 # Create models directory
 RUN mkdir -p models
 
-# Download models (uncomment and update URLs when ready)
-# RUN python ../download_models.py
+# Download models on startup (Railway will handle this)
+# Models will be downloaded automatically from Hugging Face
 
-# Expose port
+# Expose port (Railway will set PORT environment variable)
 EXPOSE 8000
 
-# Run the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run the application with Railway's dynamic port
+CMD ["sh", "-c", "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}"]

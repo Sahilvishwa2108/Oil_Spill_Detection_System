@@ -1,34 +1,62 @@
-version: '3.8'
-
 services:
+  # Backend Service - FastAPI with ML Models
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: oil-spill-backend
     ports:
       - "8000:8000"
     volumes:
       - ./backend/models:/app/models
       - ./backend/uploads:/app/uploads
     environment:
-      - ENVIRONMENT=production
+      - ENVIRONMENT=development
+      - DEBUG=True
       - API_HOST=0.0.0.0
       - API_PORT=8000
+      - LOG_LEVEL=DEBUG
+      - CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+      - HUGGINGFACE_REPO=sahilvishwa2108/oil-spill-detection-models
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 60s
+    networks:
+      - oil-spill-network
 
+  # Frontend Service - Next.js Application  
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: oil-spill-frontend
     ports:
       - "3000:3000"
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_ENVIRONMENT=development
+      - NEXT_PUBLIC_APP_NAME=Oil Spill Detection System
+      - NODE_ENV=development
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
+    networks:
+      - oil-spill-network
 
+# Networks
 networks:
-  default:
-    name: oil-spill-detection
+  oil-spill-network:
+    driver: bridge
+    name: oil-spill-network
+
+# Volumes for persistent data
+volumes:
+  models-cache:
+    name: oil-spill-models
+  uploads-cache:
+    name: oil-spill-uploads

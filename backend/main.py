@@ -22,16 +22,19 @@ import requests
 import sys
 import subprocess
 
-# Load environment variables
-# Priority: Railway > Local > Default
-env_file = ".env.local"
-if os.path.exists(".env.railway"):
-    env_file = ".env.railway"
-elif os.getenv("ENVIRONMENT") == "production":
-    env_file = None  # Use environment variables directly in production
-    
-if env_file:
-    load_dotenv(env_file)
+# Load environment variables - Railway compatible
+# In Railway, environment variables are set directly, no .env file needed
+if os.getenv("RAILWAY_ENVIRONMENT"):
+    # Railway production environment
+    logger.info("Running in Railway production environment")
+elif os.path.exists(".env.railway"):
+    load_dotenv(".env.railway")
+    logger.info("Loaded Railway environment from .env.railway")
+elif os.path.exists(".env.local"):
+    load_dotenv(".env.local")
+    logger.info("Loaded local environment from .env.local")
+else:
+    logger.info("Using system environment variables")
 
 # Configure logging
 log_level = os.getenv("LOG_LEVEL", "INFO")
@@ -272,15 +275,19 @@ def postprocess_mask(mask: np.ndarray) -> str:
 
 @app.on_event("startup")
 async def startup_event():
-    """Load models on startup"""
-    logger.info("Starting up Oil Spill Detection API...")
+    """Startup event to initialize application"""
+    logger.info("Starting Oil Spill Detection API...")
     
-    # Create models directory if it doesn't exist
+    # Create directories
     os.makedirs("models", exist_ok=True)
     os.makedirs("uploads", exist_ok=True)
     
     # Load models
+    logger.info("Loading ML models...")
     load_models()
+    
+    # Log startup completion
+    logger.info(f"API startup complete. Models loaded: model1={model1 is not None}, model2={model2 is not None}")
 
 @app.get("/", response_model=Dict[str, str])
 async def root():
@@ -293,15 +300,23 @@ async def root():
 
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
-    """Health check endpoint"""
-    return HealthResponse(
-        status="healthy",
-        models_loaded={
-            "model1": model1 is not None,
-            "model2": model2 is not None
-        },
-        timestamp=datetime.utcnow().isoformat()
-    )
+    """Health check endpoint - Railway compatible"""
+    try:
+        return HealthResponse(
+            status="healthy",
+            models_loaded={
+                "model1": model1 is not None,
+                "model2": model2 is not None
+            },
+            timestamp=datetime.utcnow().isoformat()
+        )
+    except Exception as e:
+        logger.error(f"Health check error: {str(e)}")
+        return HealthResponse(
+            status="error",
+            models_loaded={"model1": False, "model2": False},
+            timestamp=datetime.utcnow().isoformat()
+        )
 
 @app.get("/models/info")
 async def get_models_info():

@@ -9,5 +9,6 @@ restartPolicyMaxRetries = 10
 
 [env]
 ENVIRONMENT = "production"
-CORS_ORIGINS = "https://oil-spill-detection-frontend.vercel.app,http://localhost:3000"
+CORS_ORIGINS = "https://oil-spill-frontend-gnc9e75af-sahil-vishwakarmas-projects.vercel.app,http://localhost:3000"
 LOG_LEVEL = "INFO"
+HUGGINGFACE_REPO = "sahilvishwa2108/oil-spill-detection-models"
