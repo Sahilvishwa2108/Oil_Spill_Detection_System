@@ -39,3 +39,16 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Deployment artifacts and temporary files
+/hf-deploy/
+/oil-spill-detection-api/
+*.ps1
+DEPLOYMENT_*.md
+PROJECT_*.md
+railway.toml
+Procfile
+
+# Temporary documentation files
+*_TEMP.md
+*_BACKUP.md
