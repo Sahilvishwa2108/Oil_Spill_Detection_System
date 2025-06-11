@@ -1,4 +1,4 @@
-# Oil Spill Detection API - Updated for Azure deployment
+# Oil Spill Detection API - Memory Optimized for Production
 # This FastAPI application provides endpoints for oil spill detection using deep learning models
 
 import os
@@ -21,6 +21,22 @@ from dotenv import load_dotenv
 import requests
 import sys
 import subprocess
+import gc
+
+# Memory optimization - Configure TensorFlow for lower memory usage
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'  # Reduce TF logging
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'  # Disable oneDNN for stability
+tf.config.threading.set_intra_op_parallelism_threads(1)  # Single thread
+tf.config.threading.set_inter_op_parallelism_threads(1)  # Single thread
+
+# Configure GPU memory growth (if available)
+gpus = tf.config.experimental.list_physical_devices('GPU')
+if gpus:
+    try:
+        for gpu in gpus:
+            tf.config.experimental.set_memory_growth(gpu, True)
+    except RuntimeError as e:
+        logger.error(f"GPU memory configuration error: {e}")
 
 # Load environment variables - Railway compatible
 # In Railway, environment variables are set directly, no .env file needed
@@ -114,7 +130,7 @@ class HealthResponse(BaseModel):
     timestamp: str
 
 def load_models():
-    """Load the trained models"""
+    """Load the trained models with memory optimization"""
     global model1, model2
     try:
         models_dir = "models"
@@ -130,11 +146,19 @@ def load_models():
                 if not download_success:
                     logger.warning("Failed to download models, will use dummy models")
         
-        # Try to load DeepLab model
+        # Load only one model at startup to save memory (DeepLab as primary)
         deeplab_path = os.path.join(models_dir, "deeplab_final_model.h5")
         if os.path.exists(deeplab_path):
             try:
-                model1 = tf.keras.models.load_model(deeplab_path, compile=False)
+                # Memory optimization: Load with compile=False and minimal config
+                model1 = tf.keras.models.load_model(
+                    deeplab_path, 
+                    compile=False,
+                    custom_objects=None
+                )
+                # Clear session to free memory
+                tf.keras.backend.clear_session()
+                gc.collect()  # Force garbage collection
                 logger.info("DeepLab model loaded successfully as model1")
             except Exception as e:
                 logger.warning(f"Could not load DeepLab model: {str(e)}")
@@ -145,27 +169,17 @@ def load_models():
             logger.warning("DeepLab model file not found, using dummy model")
             model1 = create_dummy_model((256, 256, 3), "deeplab")
         
-        # Try to load U-Net model  
-        unet_path = os.path.join(models_dir, "unet_final_model.h5")
-        if os.path.exists(unet_path):
-            try:
-                model2 = tf.keras.models.load_model(unet_path, compile=False)
-                logger.info("U-Net model loaded successfully as model2")
-            except Exception as e:
-                logger.warning(f"Could not load U-Net model: {str(e)}")
-                # Create a simple dummy model for demonstration
-                model2 = create_dummy_model((256, 256, 3), "unet")
-                logger.info("Using dummy U-Net model for demonstration")
-        else:
-            logger.warning("U-Net model file not found, using dummy model")
-            model2 = create_dummy_model((256, 256, 3), "unet")
+        # For memory efficiency, load U-Net only when needed (lazy loading)
+        # Set model2 to None initially - will be loaded on first use
+        model2 = None
+        logger.info("U-Net model set for lazy loading to conserve memory")
     
     except Exception as e:
         logger.error(f"Error in load_models: {str(e)}")
         # Create dummy models as fallback
         model1 = create_dummy_model((256, 256, 3), "deeplab")
-        model2 = create_dummy_model((256, 256, 3), "unet")
-        logger.info("Using dummy models for demonstration")
+        model2 = None
+        logger.info("Using dummy primary model, secondary model will be lazy-loaded")
 
 def create_dummy_model(input_shape: tuple, model_type: str):
     """Create a dummy model for demonstration purposes"""
@@ -332,14 +346,27 @@ async def get_models_info():
             parameters=model1.count_params()
         )
     
-    if model2 is not None:
-        info["model2"] = ModelInfo(
-            name="U-Net (Oil Spill Detection)", 
-            version="1.0",
-            input_shape=list(model2.input_shape[1:]),
-            output_shape=list(model2.output_shape[1:]),
-            parameters=model2.count_params()
-        )
+    # For model2, show availability but don't load it yet (lazy loading)
+    models_dir = "models"
+    unet_path = os.path.join(models_dir, "unet_final_model.h5")
+    if os.path.exists(unet_path) or model2 is not None:
+        if model2 is not None:
+            info["model2"] = ModelInfo(
+                name="U-Net (Oil Spill Detection)", 
+                version="1.0",
+                input_shape=list(model2.input_shape[1:]),
+                output_shape=list(model2.output_shape[1:]),
+                parameters=model2.count_params()
+            )
+        else:
+            # Show availability without loading
+            info["model2"] = ModelInfo(
+                name="U-Net (Oil Spill Detection) - Lazy Loaded", 
+                version="1.0",
+                input_shape=[256, 256, 3],  # Expected shape
+                output_shape=[256, 256, 5],  # Expected shape
+                parameters=0  # Unknown until loaded
+            )
     
     return info
 
@@ -355,13 +382,15 @@ async def predict_oil_spill(
         # Validate file type
         if not file.content_type or not file.content_type.startswith("image/"):
             raise HTTPException(status_code=400, detail="File must be an image")
-        
-        # Select model
+          # Select model with lazy loading for model2
         selected_model = None
         if model_choice == "model1" and model1 is not None:
             selected_model = model1
-        elif model_choice == "model2" and model2 is not None:
-            selected_model = model2
+        elif model_choice == "model2":
+            # Lazy load model2 to save memory
+            selected_model = lazy_load_model2()
+            if selected_model is None:
+                raise HTTPException(status_code=500, detail="Failed to load model2")
         else:
             raise HTTPException(status_code=400, detail=f"Model {model_choice} not available")
         
@@ -425,6 +454,33 @@ async def batch_predict(
             })
     
     return {"batch_results": results}
+
+def lazy_load_model2():
+    """Lazy load model2 (U-Net) when needed to save memory"""
+    global model2
+    if model2 is None:
+        try:
+            models_dir = "models"
+            unet_path = os.path.join(models_dir, "unet_final_model.h5")
+            if os.path.exists(unet_path):
+                logger.info("Lazy loading U-Net model...")
+                model2 = tf.keras.models.load_model(
+                    unet_path, 
+                    compile=False,
+                    custom_objects=None
+                )
+                # Clear session to free memory
+                tf.keras.backend.clear_session()
+                gc.collect()
+                logger.info("U-Net model loaded successfully as model2")
+            else:
+                logger.warning("U-Net model file not found, using dummy model")
+                model2 = create_dummy_model((256, 256, 3), "unet")
+        except Exception as e:
+            logger.warning(f"Could not load U-Net model: {str(e)}")
+            model2 = create_dummy_model((256, 256, 3), "unet")
+            logger.info("Using dummy U-Net model for demonstration")
+    return model2
 
 if __name__ == "__main__":
     import uvicorn
