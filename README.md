@@ -20,7 +20,7 @@ A production-ready machine learning dashboard for detecting oil spills in satell
 ## 🌐 Live Demo
 
 🚀 **Try the live application:**
-- 📱 **Frontend Dashboard:** [https://oil-spill-frontend-gnc9e75af-sahil-vishwakarmas-projects.vercel.app](https://oil-spill-frontend-gnc9e75af-sahil-vishwakarmas-projects.vercel.app)
+- 📱 **Frontend Dashboard:** [https://oil-spill-frontend-oigeradm3-sahil-vishwakarmas-projects.vercel.app](https://oil-spill-frontend-oigeradm3-sahil-vishwakarmas-projects.vercel.app)
 - 🔧 **Backend API:** [https://nauseating-degree-production.up.railway.app](https://nauseating-degree-production.up.railway.app)
 - 📚 **API Documentation:** [https://nauseating-degree-production.up.railway.app/docs](https://nauseating-degree-production.up.railway.app/docs)
 
