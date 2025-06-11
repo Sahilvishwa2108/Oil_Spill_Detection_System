@@ -21,10 +21,17 @@ A production-ready machine learning dashboard for detecting oil spills in satell
 
 🚀 **Try the live application:**
 - 📱 **Frontend Dashboard:** [https://oil-spill-frontend-oigeradm3-sahil-vishwakarmas-projects.vercel.app](https://oil-spill-frontend-oigeradm3-sahil-vishwakarmas-projects.vercel.app)
-- 🔧 **Backend API:** [https://nauseating-degree-production.up.railway.app](https://nauseating-degree-production.up.railway.app)
-- 📚 **API Documentation:** [https://nauseating-degree-production.up.railway.app/docs](https://nauseating-degree-production.up.railway.app/docs)
+- 🔧 **Backend API:** [https://sahilvishwa2108-oil-spill-detection-api.hf.space](https://sahilvishwa2108-oil-spill-detection-api.hf.space)
+- 📚 **API Documentation:** [https://sahilvishwa2108-oil-spill-detection-api.hf.space/docs](https://sahilvishwa2108-oil-spill-detection-api.hf.space/docs)
 
-**Status:** ✅ **LIVE and OPERATIONAL**
+**Status:** 🚀 **DEPLOYING TO HUGGING FACE SPACES**
+
+### 🎯 Deployment Platforms
+- **Frontend**: Vercel (Next.js optimized)
+- **Backend**: Hugging Face Spaces (ML optimized, 16GB RAM, Free)
+- **Models**: Hugging Face Hub (Automated download)
+
+See `DEPLOYMENT_SOLUTIONS.md` for complete deployment guide.
 
 ## 🏗️ Architecture
 
@@ -210,9 +217,9 @@ docker-compose up --build
 3. Deploy automatically on push
 
 **Backend Options**:
-- **Railway**: Easy Python deployment
+- **Hugging Face Spaces**: ML-optimized platform (16GB RAM, Free)
+- **Render**: Alternative cloud platform
 - **Google Cloud Run**: Serverless containers
-- **AWS ECS**: Enterprise container service
 - **DigitalOcean Apps**: Simple cloud deployment
 
 ## 📈 Performance Metrics

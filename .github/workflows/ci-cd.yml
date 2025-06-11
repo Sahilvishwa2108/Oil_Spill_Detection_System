@@ -143,5 +143,5 @@ jobs:
         echo "✅ Frontend tests: PASSED" 
         echo "✅ Docker builds: PASSED"
         echo "🚀 Ready for automatic deployment to:"
-        echo "   - Railway (Backend)"
+        echo "   - Hugging Face Spaces (Backend)"
         echo "   - Vercel (Frontend)"
