@@ -27,11 +27,10 @@ services:
       start_period: 60s
     networks:
       - oil-spill-network
-
   # Frontend Service - Next.js Application  
   frontend:
     build:
-      context: ./frontend
+      context: .
       dockerfile: Dockerfile
     container_name: oil-spill-frontend
     ports:

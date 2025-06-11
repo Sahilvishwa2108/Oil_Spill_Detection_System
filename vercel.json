@@ -1,7 +1,10 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
-  "installCommand": "npm install",
   "framework": "nextjs",
-  "rootDirectory": "./frontend"
+  "env": {
+    "NEXT_PUBLIC_API_URL": "https://nauseating-degree-production.up.railway.app",
+    "NEXT_PUBLIC_ENVIRONMENT": "production",
+    "NEXT_PUBLIC_APP_NAME": "Oil Spill Detection System",
+    "NEXT_PUBLIC_VERSION": "1.0.0"
+  }
 }

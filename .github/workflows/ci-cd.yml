@@ -67,27 +67,19 @@ jobs:
       with:
         node-version: '18'
         cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
+        cache-dependency-path: package-lock.json
 
     - name: 📥 Install Dependencies
-      run: |
-        cd frontend
-        npm ci
+      run: npm ci
 
     - name: 🔍 Lint Check
-      run: |
-        cd frontend
-        npm run lint
+      run: npm run lint
 
     - name: 🏗️ Build Test
-      run: |
-        cd frontend
-        npm run build
+      run: npm run build
 
     - name: ✅ Type Check
-      run: |
-        cd frontend
-        npm run type-check || npx tsc --noEmit
+      run: npm run type-check || npx tsc --noEmit
 
   # Docker Build Test
   docker-test:
@@ -110,7 +102,6 @@ jobs:
 
     - name: 🏗️ Build Frontend Docker Image
       run: |
-        cd frontend
         docker build -t oil-spill-frontend:test .
         echo "✅ Frontend Docker build successful"
 
