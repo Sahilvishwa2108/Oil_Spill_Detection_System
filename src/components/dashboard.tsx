@@ -4,7 +4,6 @@ import * as React from "react"
 import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { FileUpload } from "@/components/ui/file-upload"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -12,7 +11,7 @@ import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PredictionResults } from "@/components/prediction-results"
 import { apiClient } from "@/lib/api"
-import { PredictionResult, HealthStatus, ModelInfo } from "@/types/api"
+import { PredictionResult, HealthStatus, ModelInfo, EnsemblePredictionResult } from "@/types/api"
 import { 
   Upload, 
   Zap, 
@@ -24,12 +23,10 @@ import {
   AlertCircle
 } from "lucide-react"
 
-export default function Dashboard() {
-  // State management
+export default function Dashboard() {  // State management
   const [files, setFiles] = useState<File[]>([])
-  const [selectedModel, setSelectedModel] = useState<string>("model1")
   const [isLoading, setIsLoading] = useState(false)
-  const [prediction, setPrediction] = useState<PredictionResult | null>(null)
+  const [prediction, setPrediction] = useState<EnsemblePredictionResult | null>(null)
   const [originalImageUrl, setOriginalImageUrl] = useState<string>("")
   const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null)
   const [modelsInfo, setModelsInfo] = useState<Record<string, ModelInfo>>({})
@@ -71,7 +68,6 @@ export default function Dashboard() {
       setError("Failed to load model information. Some features may not work correctly.")
     }
   }
-
   const handlePredict = async () => {
     if (files.length === 0) {
       setError("Please select an image first")
@@ -86,7 +82,7 @@ export default function Dashboard() {
       // Create preview URL for original image
       setOriginalImageUrl(URL.createObjectURL(files[0]))
       
-      const result = await apiClient.predictOilSpill(files[0], selectedModel)
+      const result = await apiClient.ensemblePredict(files[0])
       setPrediction(result)
       setError("") // Clear any previous errors on success
     } catch (err) {
@@ -257,31 +253,18 @@ export default function Dashboard() {
                   <CardDescription>
                     Upload satellite or aerial imagery for oil spill detection
                   </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">                  <FileUpload
+                </CardHeader>                <CardContent className="space-y-6">                  <FileUpload
                     onFilesChange={setFiles}
                     disabled={isLoading || isRetrying}
                     onError={handleFileUploadError}
                     maxSize={5} // 5MB limit
-                  /><div className="space-y-2">
-                    <label className="text-sm font-medium">Select Model</label>
-                    <Select
-                      value={selectedModel}
-                      onValueChange={setSelectedModel}
-                      disabled={isLoading}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a model" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="model1" disabled={!modelsLoaded.model1}>
-                          Model 1 {!modelsLoaded.model1 && '(Not Available)'}
-                        </SelectItem>
-                        <SelectItem value="model2" disabled={!modelsLoaded.model2}>
-                          Model 2 {!modelsLoaded.model2 && '(Not Available)'}
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                  />
+
+                  <div className="text-sm text-muted-foreground bg-blue-50 dark:bg-blue-950 p-3 rounded-lg">
+                    <p className="font-medium text-blue-900 dark:text-blue-100 mb-1">Ensemble Prediction</p>
+                    <p className="text-blue-700 dark:text-blue-300">
+                      Both U-Net and DeepLab V3+ models will analyze your image simultaneously for the most accurate results.
+                    </p>
                   </div>
 
                   <div className="flex gap-3">                    <Button

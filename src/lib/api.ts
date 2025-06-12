@@ -72,7 +72,6 @@ export class ApiClient {
   async getModelsInfo() {
     return this.makeRequest(`${this.baseUrl}/models/info`);
   }
-
   async predictOilSpill(file: File, modelChoice: string = 'model1') {
     if (!file) {
       throw new ApiError(400, 'No file provided');
@@ -91,6 +90,28 @@ export class ApiClient {
     formData.append('model_choice', modelChoice);
 
     return this.makeRequest(`${this.baseUrl}/predict`, {
+      method: 'POST',
+      body: formData,
+    });
+  }
+
+  async ensemblePredict(file: File) {
+    if (!file) {
+      throw new ApiError(400, 'No file provided');
+    }
+    
+    if (!file.type.startsWith('image/')) {
+      throw new ApiError(400, 'File must be an image');
+    }
+    
+    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+      throw new ApiError(400, 'File size must be less than 10MB');
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return this.makeRequest(`${this.baseUrl}/ensemble-predict`, {
       method: 'POST',
       body: formData,
     });

@@ -49,6 +49,66 @@ PROJECT_*.md
 railway.toml
 Procfile
 
+# Data and models
+backend/datasets/
+backend/notebooks/
+backend/models/
+*.h5
+*.pkl
+*.joblib
+
+# Jupyter Notebooks
+*.ipynb
+.ipynb_checkpoints/
+
+# Machine Learning artifacts
+*.ckpt
+*.pth
+*.pt
+*.safetensors
+*.onnx
+*.tflite
+*.pb
+
+# Data files
+*.csv
+*.tsv
+*.json
+*.xml
+*.parquet
+*.arrow
+
+# Image datasets (except sample images)
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+*.tif
+*.webp
+*.svg
+# But keep the public folder images
+!public/**/*.svg
+!public/**/*.ico
+!public/**/*.png
+!public/**/*.jpg
+!public/**/*.jpeg
+
 # Temporary documentation files
 *_TEMP.md
 *_BACKUP.md
+
+# Python cache and logs
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.log
+
+# Virtual environments
+venv/
+env/
+.venv/
+.env/
