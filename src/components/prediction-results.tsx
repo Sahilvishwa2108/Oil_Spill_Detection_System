@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Clock, Zap, Target, Activity, Users } from "lucide-react"
-import { PredictionResult, EnsemblePredictionResult } from "@/types/api"
+import { EnsemblePredictionResult } from "@/types/api"
 
 interface PredictionResultsProps {
   result: EnsemblePredictionResult

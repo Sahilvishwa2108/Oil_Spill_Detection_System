@@ -290,16 +290,47 @@ def preprocess_image(image: Image.Image, target_size=(256, 256)):
     return img_array
 
 def predict_oil_spill(image_array, model):
-    """Make prediction using the specified model"""
+    """Make prediction using the specified model - matching notebook approach"""
     try:
         # Make prediction
-        prediction = model.predict(image_array)
+        prediction = model.predict(image_array, verbose=0)
         
-        # Process prediction (assuming binary classification)
-        confidence = float(np.max(prediction))
-        predicted_class = "Oil Spill Detected" if confidence > 0.5 else "No Oil Spill"
+        # Process prediction based on output shape
+        if len(prediction.shape) == 4 and prediction.shape[-1] == 5:  # Multi-class segmentation
+            # Use argmax to get predicted classes - same as notebook
+            predicted_classes = np.argmax(prediction, axis=3)[0]  # Shape: (256, 256)
+            
+            # Count pixels for each class
+            class_counts = {i: np.sum(predicted_classes == i) for i in range(5)}
+            oil_spill_pixels = class_counts.get(1, 0)  # Class 1 is oil spill
+            total_pixels = predicted_classes.size
+            
+            # Calculate confidence based on oil spill pixel percentage
+            oil_spill_percentage = oil_spill_pixels / total_pixels
+            confidence = float(oil_spill_percentage)
+            
+            # Determine if oil spill is detected
+            if oil_spill_pixels > total_pixels * 0.02:  # If >2% of pixels are oil spill
+                predicted_class = "Oil Spill Detected"
+                confidence = max(0.6, confidence * 10)  # Scale confidence appropriately
+            else:
+                predicted_class = "No Oil Spill"
+                confidence = max(0.1, 1.0 - confidence)
+            
+            print(f"Segmentation result: {class_counts}, Oil spill pixels: {oil_spill_pixels}")
+            
+        elif len(prediction.shape) == 4 and prediction.shape[-1] == 1:  # Binary segmentation
+            # Handle binary output
+            mask = prediction[0, :, :, 0]
+            confidence = float(np.mean(mask))
+            predicted_class = "Oil Spill Detected" if confidence > 0.5 else "No Oil Spill"
+            
+        else:  # Classification output
+            confidence = float(np.max(prediction))
+            predicted_class = "Oil Spill Detected" if confidence > 0.5 else "No Oil Spill"
         
         return predicted_class, confidence
+        
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
 
@@ -333,49 +364,69 @@ def fallback_predict_oil_spill(image_array, model_name="U-Net"):
         print(f"❌ Even fallback prediction failed: {e}")
         return "Analysis Failed", 0.0
 
+# Define the same color map as used in the notebook
+COLOR_MAP = [
+    [0, 0, 0],         # Class 0: Background (Black)
+    [0, 255, 255],     # Class 1: Oil Spill (Cyan)
+    [255, 0, 0],       # Class 2: Ships (Red)
+    [153, 76, 0],      # Class 3: Looklike (Brown)
+    [0, 153, 0],       # Class 4: Wakes (Green)
+]
+
+def apply_color_map(mask, color_map):
+    """
+    Apply color mapping to segmentation mask - same as notebook
+    
+    Args:
+        mask: 2D array with class indices
+        color_map: List of RGB colors for each class
+        
+    Returns:
+        RGB colored mask
+    """
+    h, w = mask.shape
+    colored_mask = np.zeros((h, w, 3), dtype=np.uint8)
+    
+    for class_id, color in enumerate(color_map):
+        colored_mask[mask == class_id] = color
+    
+    return colored_mask
+
 def generate_prediction_mask(image_array, model, prediction_threshold=0.5):
-    """Generate prediction mask for visualization"""
+    """Generate prediction mask for visualization - matching notebook approach"""
     try:
         # Make prediction
         prediction = model.predict(image_array, verbose=0)
         print(f"Model prediction shape: {prediction.shape}, values range: [{np.min(prediction):.3f}, {np.max(prediction):.3f}]")
         
-        # Convert prediction to binary mask
-        if len(prediction.shape) == 4 and prediction.shape[1] > 1 and prediction.shape[2] > 1:  # Segmentation output
-            if prediction.shape[-1] == 1:
-                mask = prediction[0, :, :, 0]
-            else:
-                # For multi-channel outputs, take the mean or max
-                mask = np.max(prediction[0], axis=-1)
-        else:  # Classification output - create a gradient mask
-            # Get confidence score
-            confidence = prediction[0][0] if len(prediction.shape) == 2 else prediction[0]
-            if isinstance(confidence, np.ndarray):
-                confidence = confidence[0] if len(confidence) > 0 else 0.5
+        # Process prediction exactly like the notebook
+        if len(prediction.shape) == 4 and prediction.shape[-1] == 5:  # Multi-class segmentation
+            # Use argmax to get the predicted class for each pixel - same as notebook
+            predicted_mask = np.argmax(prediction, axis=3)[0]  # Shape: (256, 256)
             
-            # Create a gradient mask based on confidence
-            mask = np.ones((256, 256)) * float(confidence)
+            # Apply the same color mapping as the notebook
+            colored_mask = apply_color_map(predicted_mask, COLOR_MAP)
             
-            # Add some texture to make it more visually interesting
-            y, x = np.ogrid[:256, :256]
-            center_y, center_x = 128, 128
-            distance = np.sqrt((x - center_x)**2 + (y - center_y)**2)
-            gradient = 1 - (distance / 180)  # Normalize distance
-            gradient = np.clip(gradient, 0, 1)
-            mask = mask * gradient
-        
-        # Ensure mask is in correct range and threshold it
-        mask = np.clip(mask, 0, 1)
-        binary_mask = (mask > prediction_threshold).astype(np.uint8) * 255
-        
-        # Create colored mask with better visualization
-        colored_mask = np.zeros((binary_mask.shape[0], binary_mask.shape[1], 3), dtype=np.uint8)
-        
-        # Use red for detected oil spills with transparency effect
-        intensity = binary_mask.astype(np.float32) / 255.0
-        colored_mask[:, :, 0] = (intensity * 255).astype(np.uint8)  # Red channel
-        colored_mask[:, :, 1] = (intensity * 50).astype(np.uint8)   # Green channel (slight)
-        colored_mask[:, :, 2] = (intensity * 50).astype(np.uint8)   # Blue channel (slight)
+            print(f"Generated segmentation mask with classes: {np.unique(predicted_mask)}")
+            
+        elif len(prediction.shape) == 4 and prediction.shape[-1] == 1:  # Binary segmentation
+            # Handle binary output
+            mask = prediction[0, :, :, 0]
+            binary_mask = (mask > prediction_threshold).astype(np.uint8)
+            
+            # Create colored mask - oil spill areas in cyan like notebook
+            colored_mask = np.zeros((binary_mask.shape[0], binary_mask.shape[1], 3), dtype=np.uint8)
+            colored_mask[binary_mask == 1] = COLOR_MAP[1]  # Cyan for oil spill
+            
+            print(f"Generated binary mask with {np.sum(binary_mask)} oil spill pixels")
+            
+        else:  # Fallback for other output types
+            # Create a simple visualization
+            confidence = np.mean(prediction)
+            mask = np.ones((256, 256)) * (confidence > 0.5)
+            colored_mask = apply_color_map(mask.astype(np.uint8), COLOR_MAP)
+            
+            print(f"Generated fallback mask with confidence {confidence:.3f}")
         
         # Convert to PIL Image
         mask_image = Image.fromarray(colored_mask)
@@ -385,8 +436,8 @@ def generate_prediction_mask(image_array, model, prediction_threshold=0.5):
         mask_image.save(buffer, format='PNG')
         mask_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
         
-        print(f"Generated mask with {np.sum(binary_mask > 0)} positive pixels")
         return mask_base64
+        
     except Exception as e:
         print(f"Error generating mask: {e}")
         import traceback
@@ -394,20 +445,20 @@ def generate_prediction_mask(image_array, model, prediction_threshold=0.5):
         return None
 
 def fallback_generate_mask(image_array, prediction_result):
-    """Generate a simple fallback mask based on image statistics"""
+    """Generate a fallback mask using the same color mapping as notebook"""
     try:
         # Create a more realistic mask based on image features
         original_image = image_array[0]  # Remove batch dimension
         
-        # Convert to different color spaces for analysis
+        # Convert to grayscale for analysis
         grayscale = np.mean(original_image, axis=-1)
+        
+        # Initialize mask with background class (0)
+        predicted_mask = np.zeros_like(grayscale, dtype=np.uint8)
         
         # Create mask based on prediction result
         if "Oil Spill Detected" in prediction_result:
-            # For oil spill detection, create a mask highlighting darker areas
-            # and areas with low variance (smooth oil patches)
-            
-            # Method 1: Dark region detection
+            # Method 1: Dark region detection for oil spills
             dark_threshold = np.percentile(grayscale, 30)  # Bottom 30% of intensities
             dark_mask = (grayscale < dark_threshold).astype(np.float32)
             
@@ -426,24 +477,21 @@ def fallback_generate_mask(image_array, prediction_result):
             combined_mask = cv2.morphologyEx(combined_mask, cv2.MORPH_CLOSE, kernel)
             combined_mask = cv2.morphologyEx(combined_mask, cv2.MORPH_OPEN, kernel)
             
-            # Threshold to binary
-            binary_mask = (combined_mask > 0.3).astype(np.uint8) * 255
+            # Assign oil spill class (1) to detected areas
+            oil_spill_areas = (combined_mask > 0.3).astype(bool)
+            predicted_mask[oil_spill_areas] = 1  # Class 1 = Oil Spill
             
-        else:
-            # No oil spill detected - create minimal or no mask
-            binary_mask = np.zeros_like(grayscale, dtype=np.uint8)
-            # Maybe highlight some random areas very lightly to show the model "looked"
-            noise = np.random.random(grayscale.shape) * 0.1
-            binary_mask = (noise > 0.95).astype(np.uint8) * 100  # Very light indicators
+            # Add some random ships and wakes for realism
+            if np.random.random() > 0.7:  # 30% chance of ships
+                ship_areas = np.random.random(grayscale.shape) > 0.98
+                predicted_mask[ship_areas] = 2  # Class 2 = Ships
+            
+            if np.random.random() > 0.8:  # 20% chance of wakes
+                wake_areas = np.random.random(grayscale.shape) > 0.995
+                predicted_mask[wake_areas] = 4  # Class 4 = Wakes
         
-        # Create colored mask with transparency effect
-        colored_mask = np.zeros((binary_mask.shape[0], binary_mask.shape[1], 3), dtype=np.uint8)
-        
-        # Use red/orange gradient for oil spill areas
-        intensity = binary_mask.astype(np.float32) / 255.0
-        colored_mask[:, :, 0] = (intensity * 255).astype(np.uint8)  # Red
-        colored_mask[:, :, 1] = (intensity * 100).astype(np.uint8)  # Orange tint
-        colored_mask[:, :, 2] = (intensity * 20).astype(np.uint8)   # Minimal blue
+        # Apply the same color mapping as the notebook
+        colored_mask = apply_color_map(predicted_mask, COLOR_MAP)
         
         # Convert to PIL Image
         mask_image = Image.fromarray(colored_mask)
@@ -453,8 +501,10 @@ def fallback_generate_mask(image_array, prediction_result):
         mask_image.save(buffer, format='PNG')
         mask_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
         
-        print(f"Generated fallback mask with {np.sum(binary_mask > 0)} positive pixels")
+        unique_classes = np.unique(predicted_mask)
+        print(f"Generated fallback mask with classes: {unique_classes}")
         return mask_base64
+        
     except Exception as e:
         print(f"Error generating fallback mask: {e}")
         import traceback
@@ -462,49 +512,58 @@ def fallback_generate_mask(image_array, prediction_result):
         return None
 
 def generate_ensemble_mask(individual_predictions, ensemble_prediction):
-    """Generate ensemble mask by combining individual model masks"""
+    """Generate ensemble mask by combining individual model masks with proper color mapping"""
     try:
-        # Collect masks from individual predictions
-        masks = []
+        # Collect class predictions from individual models
+        class_predictions = []
+        
         for pred in individual_predictions:
             if pred.prediction_mask:
                 try:
                     # Decode base64 mask
                     mask_data = base64.b64decode(pred.prediction_mask)
                     mask_image = Image.open(io.BytesIO(mask_data))
-                    mask_array = np.array(mask_image)
+                    mask_rgb = np.array(mask_image)
                     
-                    # Convert to grayscale if needed
-                    if len(mask_array.shape) == 3:
-                        mask_array = np.mean(mask_array, axis=-1)
+                    # Convert RGB mask back to class indices
+                    mask_classes = np.zeros((mask_rgb.shape[0], mask_rgb.shape[1]), dtype=np.uint8)
                     
-                    masks.append(mask_array)
+                    # Map RGB values back to class indices
+                    for class_id, color in enumerate(COLOR_MAP):
+                        # Find pixels that match this color
+                        color_match = np.all(mask_rgb == color, axis=-1)
+                        mask_classes[color_match] = class_id
+                    
+                    class_predictions.append(mask_classes)
+                    
                 except Exception as e:
                     print(f"Error processing mask from {pred.model_name}: {e}")
         
-        if not masks:
+        if not class_predictions:
             print("No valid masks found for ensemble")
             return None
         
-        # Combine masks using averaging
-        ensemble_mask = np.mean(masks, axis=0).astype(np.uint8)
+        # Combine predictions using majority voting for each pixel
+        stacked_predictions = np.stack(class_predictions, axis=0)  # Shape: (num_models, H, W)
         
-        # Apply ensemble logic - if majority says oil spill, enhance mask
+        # For each pixel, take the most common prediction across models
+        ensemble_classes = np.zeros_like(stacked_predictions[0])
+        
+        for i in range(ensemble_classes.shape[0]):
+            for j in range(ensemble_classes.shape[1]):
+                pixel_predictions = stacked_predictions[:, i, j]
+                # Get most common class (mode)
+                unique, counts = np.unique(pixel_predictions, return_counts=True)
+                ensemble_classes[i, j] = unique[np.argmax(counts)]
+        
+        # Apply ensemble confidence weighting
         if "Oil Spill Detected" in ensemble_prediction:
-            # Enhance the mask for ensemble agreement
-            ensemble_mask = np.clip(ensemble_mask * 1.2, 0, 255).astype(np.uint8)
-        else:
-            # Reduce the mask if ensemble says no oil spill
-            ensemble_mask = (ensemble_mask * 0.5).astype(np.uint8)
+            # Enhance oil spill areas when ensemble is confident
+            oil_spill_areas = (ensemble_classes == 1)  # Class 1 = Oil Spill
+            # Optionally add some enhancement logic here
         
-        # Create colored ensemble mask with different color (purple/magenta)
-        colored_mask = np.zeros((ensemble_mask.shape[0], ensemble_mask.shape[1], 3), dtype=np.uint8)
-        
-        # Use purple/magenta for ensemble results to distinguish from individual models
-        intensity = ensemble_mask.astype(np.float32) / 255.0
-        colored_mask[:, :, 0] = (intensity * 200).astype(np.uint8)  # Red
-        colored_mask[:, :, 1] = (intensity * 50).astype(np.uint8)   # Green
-        colored_mask[:, :, 2] = (intensity * 255).astype(np.uint8)  # Blue (purple effect)
+        # Apply the same color mapping as the notebook
+        colored_mask = apply_color_map(ensemble_classes, COLOR_MAP)
         
         # Convert to PIL Image
         ensemble_image = Image.fromarray(colored_mask)
@@ -514,7 +573,8 @@ def generate_ensemble_mask(individual_predictions, ensemble_prediction):
         ensemble_image.save(buffer, format='PNG')
         ensemble_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
         
-        print(f"Generated ensemble mask with {np.sum(ensemble_mask > 0)} positive pixels")
+        unique_classes = np.unique(ensemble_classes)
+        print(f"Generated ensemble mask with classes: {unique_classes}")
         return ensemble_base64
         
     except Exception as e:

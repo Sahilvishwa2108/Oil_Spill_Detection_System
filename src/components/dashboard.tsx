@@ -11,7 +11,7 @@ import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PredictionResults } from "@/components/prediction-results"
 import { apiClient } from "@/lib/api"
-import { PredictionResult, HealthStatus, ModelInfo, EnsemblePredictionResult } from "@/types/api"
+import { HealthStatus, ModelInfo, EnsemblePredictionResult } from "@/types/api"
 import { 
   Upload, 
   Zap, 
