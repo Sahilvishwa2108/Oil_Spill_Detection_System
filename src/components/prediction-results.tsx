@@ -23,10 +23,9 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
           <p className="text-sm text-muted-foreground">{result.error}</p>
         </CardContent>
       </Card>
-    )
-  }
+    )  }
 
-  const confidencePercentage = Math.round((result.confidence_score || 0) * 100)
+  const confidencePercentage = Math.round((result.confidence || 0) * 100)
   const hasOilSpill = confidencePercentage > 50
 
   return (
@@ -37,9 +36,8 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
           <CardTitle className="flex items-center gap-2">
             <Target className="w-5 h-5" />
             Detection Results
-          </CardTitle>
-          <CardDescription>
-            Analysis completed using {result.selected_model}
+          </CardTitle>          <CardDescription>
+            Analysis completed using {result.model_used || 'Unknown Model'}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -94,9 +92,9 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
                 />
               </div>
             </CardContent>
-          </Card>
-        )}
+          </Card>        )}
 
+        {/* Detection Mask - Currently not supported by API
         {result.prediction_mask && (
           <Card>
             <CardHeader>
@@ -106,7 +104,6 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
               </CardDescription>
             </CardHeader>
             <CardContent>              <div className="aspect-square relative bg-muted rounded-lg overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={result.prediction_mask}
                   alt="Prediction mask"
@@ -116,6 +113,7 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
             </CardContent>
           </Card>
         )}
+        */}
       </div>
     </div>
   )

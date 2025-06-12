@@ -9,18 +9,38 @@ interface FileUploadProps {
   onFilesChange: (files: File[]) => void
   multiple?: boolean
   maxFiles?: number
+  maxSize?: number // in MB
   className?: string
   disabled?: boolean
+  onError?: (error: string) => void
 }
 
 export function FileUpload({ 
   onFilesChange, 
   multiple = false, 
   maxFiles = 1,
+  maxSize = 10, // 10MB default
   className,
-  disabled = false
+  disabled = false,
+  onError
 }: FileUploadProps) {
   const [files, setFiles] = React.useState<File[]>([])
+  const [uploadError, setUploadError] = React.useState<string>("")
+
+  const validateFile = (file: File): string | null => {
+    // Check file size
+    if (file.size > maxSize * 1024 * 1024) {
+      return `File "${file.name}" is too large. Maximum size is ${maxSize}MB.`
+    }
+
+    // Check file type
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/bmp', 'image/tiff']
+    if (!allowedTypes.includes(file.type)) {
+      return `File "${file.name}" is not a supported image format.`
+    }
+
+    return null
+  }
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: {
@@ -29,8 +49,30 @@ export function FileUpload({
     multiple,
     maxFiles,
     disabled,
-    onDrop: (acceptedFiles) => {
-      const newFiles = multiple ? [...files, ...acceptedFiles] : acceptedFiles
+    onDrop: (acceptedFiles, rejectedFiles) => {
+      setUploadError("")
+      
+      // Handle rejected files
+      if (rejectedFiles.length > 0) {
+        const error = rejectedFiles[0].errors[0]?.message || "File was rejected"
+        setUploadError(error)
+        onError?.(error)
+        return
+      }
+
+      // Validate accepted files
+      const validFiles: File[] = []
+      for (const file of acceptedFiles) {
+        const error = validateFile(file)
+        if (error) {
+          setUploadError(error)
+          onError?.(error)
+          return
+        }
+        validFiles.push(file)
+      }
+
+      const newFiles = multiple ? [...files, ...validFiles] : validFiles
       setFiles(newFiles)
       onFilesChange(newFiles)
     }
@@ -63,14 +105,19 @@ export function FileUpload({
                 ? "Drop the images here..." 
                 : "Drag & drop images here, or click to select"
               }
-            </p>
-            <p className="text-sm text-muted-foreground mt-2">
-              Supported formats: PNG, JPG, JPEG, GIF, BMP, TIFF
-              {multiple && ` (Max ${maxFiles} files)`}
+            </p>            <p className="text-sm text-muted-foreground mt-2">
+              Supported formats: PNG, JPG, JPEG, GIF, BMP, TIFF • Max size: {maxSize}MB
+              {multiple && ` • Max ${maxFiles} files`}
             </p>
           </div>
         </div>
       </div>
+
+      {uploadError && (
+        <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+          <p className="text-sm text-destructive">{uploadError}</p>
+        </div>
+      )}
 
       {files.length > 0 && (
         <div className="mt-6">

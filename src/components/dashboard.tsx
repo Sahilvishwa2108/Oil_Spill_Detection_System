@@ -12,7 +12,7 @@ import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PredictionResults } from "@/components/prediction-results"
 import { apiClient } from "@/lib/api"
-import { PredictionResult, HealthStatus, ModelInfo, ModelsResponse } from "@/types/api"
+import { PredictionResult, HealthStatus, ModelInfo } from "@/types/api"
 import { 
   Upload, 
   Zap, 
@@ -34,19 +34,31 @@ export default function Dashboard() {
   const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null)
   const [modelsInfo, setModelsInfo] = useState<Record<string, ModelInfo>>({})
   const [error, setError] = useState<string>("")
-
+  const [retryCount, setRetryCount] = useState<number>(0)
+  const [isRetrying, setIsRetrying] = useState<boolean>(false)
   // Load initial data
   useEffect(() => {
     loadHealthStatus()
     loadModelsInfo()
-  }, [])
+    
+    // Set up periodic health checks every 30 seconds
+    const healthCheckInterval = setInterval(() => {
+      if (!isLoading && !isRetrying) {
+        loadHealthStatus()
+      }
+    }, 30000)
+
+    return () => clearInterval(healthCheckInterval)
+  }, [isLoading, isRetrying])
+  
   const loadHealthStatus = async () => {
     try {
       const status = await apiClient.healthCheck()
       setHealthStatus(status || { status: 'unknown', models_loaded: { model1: false, model2: false }, timestamp: new Date().toISOString() })
+      setError("") // Clear any previous connection errors
     } catch (err) {
       console.error("Failed to load health status:", err)
-      setError("Failed to connect to the backend API")
+      setError("Unable to connect to the backend service. Please check if the service is running.")
       setHealthStatus({ status: 'offline', models_loaded: { model1: false, model2: false }, timestamp: new Date().toISOString() })
     }
   }
@@ -56,6 +68,7 @@ export default function Dashboard() {
       setModelsInfo(response.models || {})
     } catch (err) {
       console.error("Failed to load models info:", err)
+      setError("Failed to load model information. Some features may not work correctly.")
     }
   }
 
@@ -75,20 +88,61 @@ export default function Dashboard() {
       
       const result = await apiClient.predictOilSpill(files[0], selectedModel)
       setPrediction(result)
+      setError("") // Clear any previous errors on success
     } catch (err) {
-      setError("Failed to get prediction. Please try again.")
       console.error("Prediction error:", err)
+      
+      // Provide more specific error messages based on error type
+      if (err instanceof Error) {
+        if (err.message.includes('Unable to connect')) {
+          setError("Cannot connect to the prediction service. Please check your internet connection and try again.")
+        } else if (err.message.includes('413') || err.message.includes('too large')) {
+          setError("Image file is too large. Please try with a smaller image.")
+        } else if (err.message.includes('415') || err.message.includes('unsupported')) {
+          setError("Unsupported image format. Please use PNG, JPG, JPEG, GIF, BMP, or TIFF files.")
+        } else if (err.message.includes('500')) {
+          setError("Server error occurred during prediction. Please try again later.")
+        } else {
+          setError(`Prediction failed: ${err.message}`)
+        }
+      } else {
+        setError("An unexpected error occurred. Please try again.")
+      }
     } finally {
       setIsLoading(false)
     }
   }
-
   const resetPrediction = () => {
     setPrediction(null)
     setFiles([])
     setOriginalImageUrl("")
     setError("")
+    setRetryCount(0)
   }
+
+  const retryPrediction = async () => {
+    if (retryCount >= 3) {
+      setError("Maximum retry attempts reached. Please try again later.")
+      return
+    }
+
+    setIsRetrying(true)
+    setRetryCount(prev => prev + 1)
+    
+    // Wait a bit before retrying
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    try {
+      await handlePredict()
+    } finally {
+      setIsRetrying(false)
+    }
+  }
+
+  const handleFileUploadError = (error: string) => {
+    setError(error)
+  }
+
   const isBackendHealthy = healthStatus?.status === "healthy"
   const modelsLoaded = healthStatus?.models_loaded || { model1: false, model2: false }
 
@@ -107,11 +161,23 @@ export default function Dashboard() {
 
         {/* System Status */}
         <div className="mb-8">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="w-5 h-5" />
-                System Status
+          <Card>            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Activity className="w-5 h-5" />
+                  System Status
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    loadHealthStatus()
+                    loadModelsInfo()
+                  }}
+                  disabled={isLoading || isRetrying}
+                >
+                  Refresh
+                </Button>
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -156,14 +222,26 @@ export default function Dashboard() {
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Error</AlertTitle>
-                <AlertDescription>
-                  {error}
-                  <button
-                    onClick={() => setError("")}
-                    className="ml-2 text-sm underline hover:no-underline"
-                  >
-                    Dismiss
-                  </button>
+                <AlertDescription className="flex items-center justify-between">
+                  <span>{error}</span>
+                  <div className="flex gap-2 ml-4">
+                    {prediction === null && files.length > 0 && retryCount < 3 && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={retryPrediction}
+                        disabled={isRetrying}
+                      >
+                        {isRetrying ? "Retrying..." : `Retry (${3 - retryCount} left)`}
+                      </Button>
+                    )}
+                    <button
+                      onClick={() => setError("")}
+                      className="text-sm underline hover:no-underline"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
                 </AlertDescription>
               </Alert>
             )}
@@ -180,11 +258,12 @@ export default function Dashboard() {
                     Upload satellite or aerial imagery for oil spill detection
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <FileUpload
+                <CardContent className="space-y-6">                  <FileUpload
                     onFilesChange={setFiles}
-                    disabled={isLoading}
-                  />                  <div className="space-y-2">
+                    disabled={isLoading || isRetrying}
+                    onError={handleFileUploadError}
+                    maxSize={5} // 5MB limit
+                  /><div className="space-y-2">
                     <label className="text-sm font-medium">Select Model</label>
                     <Select
                       value={selectedModel}
@@ -205,16 +284,15 @@ export default function Dashboard() {
                     </Select>
                   </div>
 
-                  <div className="flex gap-3">
-                    <Button
+                  <div className="flex gap-3">                    <Button
                       onClick={handlePredict}
-                      disabled={isLoading || files.length === 0 || !isBackendHealthy}
+                      disabled={isLoading || isRetrying || files.length === 0 || !isBackendHealthy}
                       className="flex-1"
                     >
-                      {isLoading ? (
+                      {isLoading || isRetrying ? (
                         <>
                           <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-                          Analyzing...
+                          {isRetrying ? `Retrying... (${retryCount}/3)` : "Analyzing..."}
                         </>
                       ) : (
                         <>
