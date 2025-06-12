@@ -1,18 +1,23 @@
 export interface PredictionResult {
   success: boolean;
-  prediction_mask?: string;
-  confidence_score?: number;
+  prediction?: string;
+  confidence?: number;
   processing_time?: number;
-  selected_model?: string;
+  model_used?: string;
   error?: string;
 }
 
 export interface ModelInfo {
   name: string;
-  version: string;
-  input_shape: number[];
-  output_shape: number[];
-  parameters: number;
+  description: string;
+  loaded: boolean;
+}
+
+export interface ModelsResponse {
+  models: {
+    model1: ModelInfo;
+    model2: ModelInfo;
+  };
 }
 
 export interface HealthStatus {

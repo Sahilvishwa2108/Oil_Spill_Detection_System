@@ -12,7 +12,7 @@ import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PredictionResults } from "@/components/prediction-results"
 import { apiClient } from "@/lib/api"
-import { PredictionResult, HealthStatus, ModelInfo } from "@/types/api"
+import { PredictionResult, HealthStatus, ModelInfo, ModelsResponse } from "@/types/api"
 import { 
   Upload, 
   Zap, 
@@ -40,21 +40,20 @@ export default function Dashboard() {
     loadHealthStatus()
     loadModelsInfo()
   }, [])
-
   const loadHealthStatus = async () => {
     try {
       const status = await apiClient.healthCheck()
-      setHealthStatus(status)
+      setHealthStatus(status || { status: 'unknown', models_loaded: { model1: false, model2: false }, timestamp: new Date().toISOString() })
     } catch (err) {
       console.error("Failed to load health status:", err)
       setError("Failed to connect to the backend API")
+      setHealthStatus({ status: 'offline', models_loaded: { model1: false, model2: false }, timestamp: new Date().toISOString() })
     }
   }
-
   const loadModelsInfo = async () => {
     try {
-      const info = await apiClient.getModelsInfo()
-      setModelsInfo(info)
+      const response = await apiClient.getModelsInfo()
+      setModelsInfo(response.models || {})
     } catch (err) {
       console.error("Failed to load models info:", err)
     }
@@ -278,8 +277,7 @@ export default function Dashboard() {
           {/* Models Tab */}
           <TabsContent value="models" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {Object.entries(modelsInfo).map(([modelKey, model]) => (
-                <Card key={modelKey}>
+              {Object.entries(modelsInfo).map(([modelKey, model]) => (                <Card key={modelKey}>
                   <CardHeader>
                     <CardTitle className="flex items-center justify-between">
                       <span className="flex items-center gap-2">
@@ -290,27 +288,19 @@ export default function Dashboard() {
                         {modelsLoaded[modelKey as keyof typeof modelsLoaded] ? "Loaded" : "Not Loaded"}
                       </Badge>
                     </CardTitle>
-                    <CardDescription>Version {model.version}</CardDescription>
+                    <CardDescription>{model.description}</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="font-medium">Input Shape:</span>
-                        <div className="text-muted-foreground">
-                          {model.input_shape.join(" × ")}
-                        </div>
-                      </div>
-                      <div>
-                        <span className="font-medium">Output Shape:</span>
-                        <div className="text-muted-foreground">
-                          {model.output_shape.join(" × ")}
-                        </div>
+                    <div className="text-sm">
+                      <span className="font-medium">Status:</span>
+                      <div className="text-muted-foreground">
+                        {model.loaded ? "Ready for predictions" : "Will load on first use"}
                       </div>
                     </div>
                     <div className="text-sm">
-                      <span className="font-medium">Parameters:</span>
+                      <span className="font-medium">Type:</span>
                       <div className="text-muted-foreground">
-                        {model.parameters.toLocaleString()}
+                        Semantic Segmentation Model
                       </div>
                     </div>
                   </CardContent>
