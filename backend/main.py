@@ -368,15 +368,15 @@ async def predict(
         
         # Preprocess image
         processed_image = preprocess_image(image)
-        
-        # Load appropriate model
+          # Load appropriate model
         if model_choice == "model1":
             model = lazy_load_model1()
             model_name = "U-Net"
         else:
             model = lazy_load_model2()
             model_name = "DeepLab V3+"
-          if model is None:
+        
+        if model is None:
             print(f"⚠️ Model {model_choice} failed to load, using fallback prediction")
             # Use fallback prediction instead of failing
             predicted_class, confidence = fallback_predict_oil_spill(processed_image, model_name)
