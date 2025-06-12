@@ -175,29 +175,37 @@ def predict_oil_spill(image_array, model):
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint"""
+    # Check if model files exist (they may not be loaded in memory yet due to lazy loading)
+    model1_exists = os.path.exists("models/unet_final_model.h5")
+    model2_exists = os.path.exists("models/deeplab_final_model.h5")
+    
     return HealthResponse(
         status="healthy",
         timestamp=datetime.now().isoformat(),
         models_loaded={
-            "model1": model1 is not None,
-            "model2": model2 is not None
+            "model1": model1_exists,
+            "model2": model2_exists
         }
     )
 
 @app.get("/models/info")
 async def get_models_info():
     """Get information about available models"""
+    # Check if model files exist
+    model1_exists = os.path.exists("models/unet_final_model.h5")
+    model2_exists = os.path.exists("models/deeplab_final_model.h5")
+    
     return {
         "models": {
             "model1": {
                 "name": "U-Net",
                 "description": "U-Net model for semantic segmentation",
-                "loaded": model1 is not None
+                "loaded": model1_exists
             },
             "model2": {
                 "name": "DeepLab V3+",
                 "description": "DeepLab V3+ model for semantic segmentation", 
-                "loaded": model2 is not None
+                "loaded": model2_exists
             }
         }
     }
