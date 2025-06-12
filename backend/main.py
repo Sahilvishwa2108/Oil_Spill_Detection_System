@@ -128,11 +128,68 @@ def lazy_load_model1():
             
             if os.path.exists(model_path):
                 print(f"✅ Model file exists at {model_path}")
-                model1 = tf.keras.models.load_model(model_path)
-                print("✅ Model 1 (U-Net) loaded successfully into memory")
+                
+                # Try different loading approaches for compatibility
+                try:
+                    # First try: Load without compilation for compatibility
+                    model1 = tf.keras.models.load_model(model_path, compile=False)
+                    print("✅ Model 1 (U-Net) loaded successfully into memory")
+                except Exception as e1:
+                    print(f"⚠️ Standard loading failed: {str(e1)[:100]}...")
+                    try:
+                        # Second try: Use tf.keras.utils.custom_object_scope
+                        with tf.keras.utils.custom_object_scope({'batch_shape': lambda **kwargs: None}):
+                            model1 = tf.keras.models.load_model(model_path, compile=False)
+                            print("✅ Model 1 (U-Net) loaded with custom object scope")
+                    except Exception as e2:
+                        print(f"⚠️ Custom object scope failed: {str(e2)[:100]}...")
+                        try:
+                            # Third try: Legacy format loading
+                            import h5py
+                            with h5py.File(model_path, 'r') as f:
+                                if 'model_config' in f.attrs:
+                                    print("🔄 Detected legacy model format, attempting conversion...")
+                                    # Try to load with legacy support
+                                    from tensorflow.keras.models import model_from_json
+                                    config = f.attrs['model_config']
+                                    if isinstance(config, bytes):
+                                        config = config.decode('utf-8')
+                                    
+                                    # Fix the config by removing batch_shape references
+                                    import json
+                                    config_dict = json.loads(config)
+                                    
+                                    # Recursively remove batch_shape from config
+                                    def remove_batch_shape(obj):
+                                        if isinstance(obj, dict):
+                                            if 'batch_shape' in obj:
+                                                if 'input_shape' not in obj and obj['batch_shape']:
+                                                    # Convert batch_shape to input_shape
+                                                    batch_shape = obj['batch_shape']
+                                                    if batch_shape and len(batch_shape) > 1:
+                                                        obj['input_shape'] = batch_shape[1:]  # Remove batch dimension
+                                                del obj['batch_shape']
+                                            for key, value in obj.items():
+                                                remove_batch_shape(value)
+                                        elif isinstance(obj, list):
+                                            for item in obj:
+                                                remove_batch_shape(item)
+                                    
+                                    remove_batch_shape(config_dict)
+                                    fixed_config = json.dumps(config_dict)
+                                    
+                                    # Create model from fixed config
+                                    model1 = model_from_json(fixed_config)
+                                    model1.load_weights(model_path)
+                                    print("✅ Model 1 (U-Net) loaded with legacy compatibility fix")
+                                else:
+                                    raise Exception("Cannot determine model format")
+                        except Exception as e3:
+                            print(f"❌ All loading methods failed. Error: {str(e3)[:100]}...")
+                            print("🔄 Model may need to be retrained with current TensorFlow version")
+                            return None
             else:
                 print(f"❌ Model 1 not found at {model_path}")
-                # List files in models directory for debugging
                 models_dir = Path("models")
                 if models_dir.exists():
                     files = list(models_dir.glob("*"))
@@ -159,11 +216,25 @@ def lazy_load_model2():
             
             if os.path.exists(model_path):
                 print(f"✅ Model file exists at {model_path}")
-                model2 = tf.keras.models.load_model(model_path)
-                print("✅ Model 2 (DeepLab) loaded successfully into memory")
+                
+                # Try different loading approaches for compatibility
+                try:
+                    # First try: Load without compilation for compatibility
+                    model2 = tf.keras.models.load_model(model_path, compile=False)
+                    print("✅ Model 2 (DeepLab) loaded successfully into memory")
+                except Exception as e1:
+                    print(f"⚠️ Standard loading failed: {str(e1)[:100]}...")
+                    try:
+                        # Second try: Use tf.keras.utils.custom_object_scope
+                        with tf.keras.utils.custom_object_scope({'batch_shape': lambda **kwargs: None}):
+                            model2 = tf.keras.models.load_model(model_path, compile=False)
+                            print("✅ Model 2 (DeepLab) loaded with custom object scope")
+                    except Exception as e2:
+                        print(f"⚠️ Custom object scope failed: {str(e2)[:100]}...")
+                        print("🔄 Model may need to be retrained with current TensorFlow version")
+                        return None
             else:
                 print(f"❌ Model 2 not found at {model_path}")
-                # List files in models directory for debugging
                 models_dir = Path("models")
                 if models_dir.exists():
                     files = list(models_dir.glob("*"))
