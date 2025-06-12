@@ -71,8 +71,9 @@ app = FastAPI(
 allowed_origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "https://*.vercel.app",
-    "https://oil-spill-detection.vercel.app",  # Add your actual Vercel domain
+    "https://oil-spill-detection-system.vercel.app",  # Your actual Vercel domain
+    "https://oil-spill-frontend-oigeradm3-sahil-vishwakarmas-projects.vercel.app",
+    "*"  # Temporarily allow all origins for debugging
 ]
 
 # Get origins from environment variable if available
