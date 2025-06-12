@@ -18,6 +18,14 @@ import base64
 from datetime import datetime
 import gc
 
+# Import TensorFlow with proper error handling
+try:
+    import tensorflow as tf
+    print("✅ TensorFlow imported successfully")
+except ImportError as e:
+    print(f"❌ Failed to import TensorFlow: {e}")
+    tf = None
+
 # Configure environment for optimal performance
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Suppress TensorFlow logs
 
@@ -111,15 +119,30 @@ def lazy_load_model1():
     global model1
     if model1 is None:
         try:
-            import tensorflow as tf
+            if tf is None:
+                print("❌ TensorFlow not available for model loading")
+                return None
+                
             model_path = "models/unet_final_model.h5"
+            print(f"🔄 Attempting to load model1 from {model_path}")
+            
             if os.path.exists(model_path):
+                print(f"✅ Model file exists at {model_path}")
                 model1 = tf.keras.models.load_model(model_path)
-                print("Model 1 (U-Net) loaded successfully")
+                print("✅ Model 1 (U-Net) loaded successfully into memory")
             else:
-                print(f"Model 1 not found at {model_path}")
+                print(f"❌ Model 1 not found at {model_path}")
+                # List files in models directory for debugging
+                models_dir = Path("models")
+                if models_dir.exists():
+                    files = list(models_dir.glob("*"))
+                    print(f"📁 Files in models directory: {files}")
+                else:
+                    print("📁 Models directory does not exist")
         except Exception as e:
-            print(f"Error loading model 1: {e}")
+            print(f"❌ Error loading model 1: {e}")
+            import traceback
+            traceback.print_exc()
     return model1
 
 def lazy_load_model2():
@@ -127,15 +150,30 @@ def lazy_load_model2():
     global model2
     if model2 is None:
         try:
-            import tensorflow as tf
+            if tf is None:
+                print("❌ TensorFlow not available for model loading")
+                return None
+                
             model_path = "models/deeplab_final_model.h5"
+            print(f"🔄 Attempting to load model2 from {model_path}")
+            
             if os.path.exists(model_path):
+                print(f"✅ Model file exists at {model_path}")
                 model2 = tf.keras.models.load_model(model_path)
-                print("Model 2 (DeepLab) loaded successfully")
+                print("✅ Model 2 (DeepLab) loaded successfully into memory")
             else:
-                print(f"Model 2 not found at {model_path}")
+                print(f"❌ Model 2 not found at {model_path}")
+                # List files in models directory for debugging
+                models_dir = Path("models")
+                if models_dir.exists():
+                    files = list(models_dir.glob("*"))
+                    print(f"📁 Files in models directory: {files}")
+                else:
+                    print("📁 Models directory does not exist")
         except Exception as e:
-            print(f"Error loading model 2: {e}")
+            print(f"❌ Error loading model 2: {e}")
+            import traceback
+            traceback.print_exc()
     return model2
 
 def preprocess_image(image: Image.Image, target_size=(256, 256)):
@@ -282,6 +320,37 @@ async def root():
             "docs": "/docs"
         }
     }
+
+@app.get("/debug/models")
+async def debug_models():
+    """Debug endpoint to check model loading status"""
+    debug_info = {
+        "tensorflow_available": tf is not None,
+        "models_directory_exists": os.path.exists("models"),
+        "model_files": [],
+        "model1_loaded": model1 is not None,
+        "model2_loaded": model2 is not None
+    }
+    
+    # List files in models directory
+    models_dir = Path("models")
+    if models_dir.exists():
+        debug_info["model_files"] = [str(f) for f in models_dir.glob("*")]
+    
+    # Check specific model files
+    debug_info["unet_model_exists"] = os.path.exists("models/unet_final_model.h5")
+    debug_info["deeplab_model_exists"] = os.path.exists("models/deeplab_final_model.h5")
+    
+    # Try to get file sizes
+    try:
+        if debug_info["unet_model_exists"]:
+            debug_info["unet_model_size"] = os.path.getsize("models/unet_final_model.h5")
+        if debug_info["deeplab_model_exists"]:
+            debug_info["deeplab_model_size"] = os.path.getsize("models/deeplab_final_model.h5")
+    except Exception as e:
+        debug_info["size_check_error"] = str(e)
+    
+    return debug_info
 
 if __name__ == "__main__":
     import uvicorn
