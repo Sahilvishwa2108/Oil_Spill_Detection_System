@@ -20,18 +20,18 @@ A production-ready machine learning dashboard for detecting oil spills in satell
 ## 🌐 Live Demo
 
 🚀 **Try the live application:**
-- 📱 **Frontend Dashboard:** [https://oil-spill-frontend-oigeradm3-sahil-vishwakarmas-projects.vercel.app](https://oil-spill-frontend-oigeradm3-sahil-vishwakarmas-projects.vercel.app)
-- 🔧 **Backend API:** [https://sahilvishwa2108-oil-spill-detection-api.hf.space](https://sahilvishwa2108-oil-spill-detection-api.hf.space)
-- 📚 **API Documentation:** [https://sahilvishwa2108-oil-spill-detection-api.hf.space/docs](https://sahilvishwa2108-oil-spill-detection-api.hf.space/docs)
+- 📱 **Frontend Dashboard:** [Deployed on Vercel](https://your-app.vercel.app) - ✅ LIVE
+- 🔧 **Backend API:** [To be deployed on Render](https://your-api.onrender.com) - 🔄 READY FOR DEPLOY
+- 📚 **API Documentation:** Available at `/docs` endpoint
 
-**Status:** ✅ **LIVE & DEPLOYED**
+**Status:** 🚀 **READY FOR RENDER DEPLOYMENT**
 
 ### 🎯 Deployment Platforms
-- **Frontend**: Vercel (Next.js optimized) - ✅ LIVE
-- **Backend**: Hugging Face Spaces (ML optimized, 16GB RAM) - ✅ LIVE
-- **Models**: Hugging Face Hub (Automated download)
+- **Frontend**: Vercel (Next.js optimized) - ✅ DEPLOYED
+- **Backend**: Render (Free tier optimized) - 🔄 READY TO DEPLOY
+- **Models**: Hugging Face Hub (Automated download from HF repo)
 
-See `DEPLOYMENT_SOLUTIONS.md` for complete deployment guide.
+See `DEPLOYMENT.md` for complete Render deployment guide.
 
 ## 🏗️ Architecture
 

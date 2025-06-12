@@ -1,11 +1,13 @@
 """
-Lightweight Oil Spill Detection API for HuggingFace Spaces
-Simplified version that loads models on-demand to reduce memory usage
+Oil Spill Detection API - Optimized for Render Deployment
+Downloads models on startup and loads them on-demand to reduce memory usage
 """
 
 import os
 import io
 import numpy as np
+import requests
+from pathlib import Path
 from PIL import Image
 from typing import Optional, List
 from fastapi import FastAPI, File, UploadFile, HTTPException
@@ -16,8 +18,48 @@ import base64
 from datetime import datetime
 import gc
 
-# Configure environment for HuggingFace Spaces
+# Configure environment for optimal performance
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Suppress TensorFlow logs
+
+# Model download configuration
+HUGGINGFACE_REPO = os.getenv("HUGGINGFACE_REPO", "sahilvishwa2108/oil-spill-detection-models")
+MODEL_FILES = {
+    "unet_final_model.h5": "unet_final_model.h5",
+    "deeplab_final_model.h5": "deeplab_final_model.h5"
+}
+
+def download_model_if_needed(filename: str) -> bool:
+    """Download model from HuggingFace if not exists locally"""
+    models_dir = Path("models")
+    models_dir.mkdir(exist_ok=True)
+    
+    model_path = models_dir / filename
+    
+    if model_path.exists():
+        print(f"✅ Model {filename} already exists")
+        return True
+    
+    try:
+        url = f"https://huggingface.co/{HUGGINGFACE_REPO}/resolve/main/{filename}"
+        print(f"⬇️ Downloading {filename} from HuggingFace...")
+        
+        response = requests.get(url, stream=True)
+        response.raise_for_status()
+        
+        with open(model_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+        
+        print(f"✅ Successfully downloaded {filename}")
+        return True
+    except Exception as e:
+        print(f"❌ Failed to download {filename}: {e}")
+        return False
+
+# Download models on startup
+print("🤖 Initializing Oil Spill Detection API...")
+for filename in MODEL_FILES.values():
+    download_model_if_needed(filename)
 
 app = FastAPI(
     title="Oil Spill Detection API",
@@ -26,9 +68,21 @@ app = FastAPI(
 )
 
 # CORS middleware for frontend access
+allowed_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://*.vercel.app",
+    "https://oil-spill-detection.vercel.app",  # Add your actual Vercel domain
+]
+
+# Get origins from environment variable if available
+env_origins = os.getenv("CORS_ORIGINS")
+if env_origins:
+    allowed_origins.extend(env_origins.split(","))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, specify your frontend domain
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -1,50 +1,62 @@
----
-title: Oil Spill Detection API
-emoji: 🛢️
-colorFrom: blue
-colorTo: green
-sdk: docker
-pinned: false
-license: mit
-app_port: 7860
----
+# Oil Spill Detection API - Backend
 
-# Oil Spill Detection API
+## Deployment on Render (Free Tier)
 
-A lightweight FastAPI application for detecting oil spills in satellite imagery using deep learning models.
+This backend is optimized for deployment on Render's free tier with GitHub Student Developer Pack benefits.
 
-## Features
+### Features
+- **Memory Optimized**: Models download on startup, not included in build
+- **Free Tier Compatible**: Uses efficient resource management
+- **Auto-scaling**: Lazy loading of ML models
+- **Cross-Origin Support**: Configured for Vercel frontend
 
-- **U-Net Model**: Semantic segmentation for oil spill detection
-- **DeepLab V3+ Model**: Advanced semantic segmentation
-- **Lazy Loading**: Models load on-demand to save memory
-- **RESTful API**: Easy integration with frontend applications
+### Quick Deploy to Render
 
-## Usage
+1. **Fork/Push to GitHub**: Ensure your code is in a GitHub repository
 
-### Health Check
+2. **Connect to Render**:
+   - Go to [render.com](https://render.com)
+   - Sign up with GitHub Student Pack
+   - Create new Web Service
+   - Connect your repository
+
+3. **Configuration**:
+   - **Build Command**: `echo "Building..."`
+   - **Start Command**: `python main.py`
+   - **Environment**: Docker
+   - **Dockerfile Path**: `./backend/Dockerfile`
+   - **Auto-Deploy**: Disabled (manual deploy recommended)
+
+4. **Environment Variables**:
+   ```
+   HUGGINGFACE_REPO=sahilvishwa2108/oil-spill-detection-models
+   CORS_ORIGINS=https://your-frontend.vercel.app
+   PORT=10000
+   ```
+
+5. **Health Check**: `/health`
+
+### Model Management
+- Models (~220MB total) download automatically on first startup
+- Cached for subsequent requests
+- Lazy loading reduces memory usage
+
+### API Endpoints
+- `GET /health` - Health check
+- `GET /` - API info
+- `GET /models/info` - Model status
+- `POST /predict` - Image prediction
+
+### Troubleshooting
+- **Build Timeout**: Models download at runtime, not build time
+- **Memory Issues**: Only one model loads at a time
+- **CORS Errors**: Update CORS_ORIGINS environment variable
+
+### Local Development
 ```bash
-GET /health
+cd backend
+pip install -r requirements.txt
+python main.py
 ```
 
-### Predict Oil Spill
-```bash
-POST /predict
-Content-Type: multipart/form-data
-
-Parameters:
-- file: Image file (JPG, PNG)
-- model_choice: "model1" (U-Net) or "model2" (DeepLab)
-```
-
-### API Documentation
-Visit `/docs` for interactive API documentation.
-
-## Model Information
-
-- **Model 1**: U-Net architecture for semantic segmentation
-- **Model 2**: DeepLab V3+ for enhanced accuracy
-- **Input Size**: 256x256 pixels
-- **Output**: Binary classification (Oil Spill / No Oil Spill)
-
-This API is optimized for HuggingFace Spaces with memory-efficient model loading.
+Visit `http://localhost:8000/docs` for API documentation.
