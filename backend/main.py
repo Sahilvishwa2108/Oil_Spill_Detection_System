@@ -22,11 +22,26 @@ import cv2
 # Import TensorFlow with proper error handling
 try:
     import tensorflow as tf
+    # Import Keras components conditionally - TensorFlow 2.x uses tf.keras
+    try:
+        from tensorflow.keras.models import model_from_json  # type: ignore
+    except (ImportError, AttributeError):
+        try:
+            # Alternative import for different TensorFlow versions
+            from keras.models import model_from_json  # type: ignore
+        except ImportError:
+            model_from_json = None
+    try:
+        import h5py
+    except ImportError:
+        h5py = None
 
     print("✅ TensorFlow imported successfully")
 except ImportError as e:
     print(f"❌ Failed to import TensorFlow: {e}")
     tf = None
+    model_from_json = None
+    h5py = None
 
 # Configure environment for optimal performance
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # Suppress TensorFlow logs
@@ -159,9 +174,7 @@ def lazy_load_model1():
             print(f"🔄 Attempting to load model1 from {model_path}")
 
             if os.path.exists(model_path):
-                print(f"✅ Model file exists at {model_path}")
-
-                # Try different loading approaches for compatibility
+                print(f"✅ Model file exists at {model_path}")                # Try different loading approaches for compatibility
                 try:
                     # First try: Load without compilation for compatibility
                     model1 = tf.keras.models.load_model(model_path, compile=False)
@@ -181,7 +194,8 @@ def lazy_load_model1():
                         print(f"⚠️ Custom object scope failed: {str(e2)[:100]}...")
                         try:
                             # Third try: Legacy format loading
-                            import h5py
+                            if h5py is None:
+                                raise Exception("h5py not available")
 
                             with h5py.File(model_path, "r") as f:
                                 if "model_config" in f.attrs:
@@ -189,7 +203,8 @@ def lazy_load_model1():
                                         "🔄 Detected legacy model format, attempting conversion..."
                                     )
                                     # Try to load with legacy support
-                                    from tensorflow.keras.models import model_from_json
+                                    if model_from_json is None:
+                                        raise Exception("model_from_json not available")
 
                                     config = f.attrs["model_config"]
                                     if isinstance(config, bytes):
