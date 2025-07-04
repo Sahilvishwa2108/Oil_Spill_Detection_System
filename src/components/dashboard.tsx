@@ -82,27 +82,38 @@ export default function Dashboard() {  // State management
       // Create preview URL for original image
       setOriginalImageUrl(URL.createObjectURL(files[0]))
       
-      const result = await apiClient.ensemblePredict(files[0])
+      // Use detailed prediction for better analytics
+      const result = await apiClient.detailedEnsemblePredict(files[0])
       setPrediction(result)
       setError("") // Clear any previous errors on success
     } catch (err) {
       console.error("Prediction error:", err)
       
-      // Provide more specific error messages based on error type
-      if (err instanceof Error) {
-        if (err.message.includes('Unable to connect')) {
-          setError("Cannot connect to the prediction service. Please check your internet connection and try again.")
-        } else if (err.message.includes('413') || err.message.includes('too large')) {
-          setError("Image file is too large. Please try with a smaller image.")
-        } else if (err.message.includes('415') || err.message.includes('unsupported')) {
-          setError("Unsupported image format. Please use PNG, JPG, JPEG, GIF, BMP, or TIFF files.")
-        } else if (err.message.includes('500')) {
-          setError("Server error occurred during prediction. Please try again later.")
+      // Fallback to regular ensemble prediction if detailed fails
+      try {
+        console.log("Falling back to regular ensemble prediction...")
+        const result = await apiClient.ensemblePredict(files[0])
+        setPrediction(result)
+        setError("") // Clear any previous errors on success
+      } catch (fallbackErr) {
+        console.error("Fallback prediction also failed:", fallbackErr)
+        
+        // Provide more specific error messages based on error type
+        if (err instanceof Error) {
+          if (err.message.includes('Unable to connect')) {
+            setError("Cannot connect to the prediction service. Please check your internet connection and try again.")
+          } else if (err.message.includes('413') || err.message.includes('too large')) {
+            setError("Image file is too large. Please try with a smaller image.")
+          } else if (err.message.includes('415') || err.message.includes('unsupported')) {
+            setError("Unsupported image format. Please use PNG, JPG, JPEG, GIF, BMP, or TIFF files.")
+          } else if (err.message.includes('500')) {
+            setError("Server error occurred during prediction. Please try again later.")
+          } else {
+            setError(`Prediction failed: ${err.message}`)
+          }
         } else {
-          setError(`Prediction failed: ${err.message}`)
+          setError("An unexpected error occurred. Please try again.")
         }
-      } else {
-        setError("An unexpected error occurred. Please try again.")
       }
     } finally {
       setIsLoading(false)

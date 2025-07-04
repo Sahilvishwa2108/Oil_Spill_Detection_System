@@ -46,6 +46,12 @@ except ImportError as e:
 # Configure environment for optimal performance
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # Suppress TensorFlow logs
 
+# Model configuration constants
+IMG_WIDTH = 256
+IMG_HEIGHT = 256
+IMG_CHANNELS = 3
+IMG_CLASSES = 5
+
 # Model download configuration - Updated with new .keras models
 HUGGINGFACE_REPO_UNET = os.getenv(
     "HUGGINGFACE_REPO_UNET", 
@@ -299,34 +305,43 @@ def predict_oil_spill(image_array, model):
     try:
         # Make prediction
         prediction = model.predict(image_array, verbose=0)
+        print(f"Raw prediction shape: {prediction.shape}")
+        print(f"Prediction stats - Min: {np.min(prediction):.4f}, Max: {np.max(prediction):.4f}, Mean: {np.mean(prediction):.4f}")
 
-        # Process prediction based on output shape
+        # Process prediction based on output shape - following notebook logic
         if (
             len(prediction.shape) == 4 and prediction.shape[-1] == 5
         ):  # Multi-class segmentation
             # Use argmax to get predicted classes - same as notebook
             predicted_classes = np.argmax(prediction, axis=3)[0]  # Shape: (256, 256)
+            
+            # Get confidence map
+            confidence_map = np.max(prediction, axis=3)[0]  # Shape: (256, 256)
+            mean_confidence = float(np.mean(confidence_map))
 
             # Count pixels for each class
             class_counts = {i: np.sum(predicted_classes == i) for i in range(5)}
             oil_spill_pixels = class_counts.get(1, 0)  # Class 1 is oil spill
             total_pixels = predicted_classes.size
 
-            # Calculate confidence based on oil spill pixel percentage
+            # Calculate oil spill percentage
             oil_spill_percentage = oil_spill_pixels / total_pixels
-            confidence = float(oil_spill_percentage)
 
-            # Determine if oil spill is detected
-            if oil_spill_pixels > total_pixels * 0.02:  # If >2% of pixels are oil spill
+            print(f"Class distribution: {class_counts}")
+            print(f"Oil spill pixels: {oil_spill_pixels} ({oil_spill_percentage*100:.2f}%)")
+            print(f"Mean confidence: {mean_confidence:.4f}")
+
+            # Determine if oil spill is detected - using notebook logic
+            # Lower threshold for more sensitive detection
+            if oil_spill_percentage > 0.005:  # If >0.5% of pixels are oil spill (more sensitive)
                 predicted_class = "Oil Spill Detected"
-                confidence = max(0.6, confidence * 10)  # Scale confidence appropriately
+                # Calculate confidence based on oil spill percentage and model confidence
+                confidence = float(min(0.95, max(0.6, oil_spill_percentage * 20 + mean_confidence * 0.5)))
             else:
                 predicted_class = "No Oil Spill"
-                confidence = max(0.1, 1.0 - confidence)
+                confidence = float(min(0.95, max(0.6, (1.0 - oil_spill_percentage) * mean_confidence)))
 
-            print(
-                f"Segmentation result: {class_counts}, Oil spill pixels: {oil_spill_pixels}"
-            )
+            print(f"Final prediction: {predicted_class} (confidence: {confidence:.3f})")
 
         elif (
             len(prediction.shape) == 4 and prediction.shape[-1] == 1
@@ -335,13 +350,13 @@ def predict_oil_spill(image_array, model):
             mask = prediction[0, :, :, 0]
             confidence = float(np.mean(mask))
             predicted_class = (
-                "Oil Spill Detected" if confidence > 0.5 else "No Oil Spill"
+                "Oil Spill Detected" if confidence > 0.3 else "No Oil Spill"  # Lower threshold
             )
 
         else:  # Classification output
             confidence = float(np.max(prediction))
             predicted_class = (
-                "Oil Spill Detected" if confidence > 0.5 else "No Oil Spill"
+                "Oil Spill Detected" if confidence > 0.3 else "No Oil Spill"  # Lower threshold
             )
 
         return predicted_class, confidence
@@ -888,6 +903,185 @@ async def ensemble_predict_endpoint(file: UploadFile = File(...)):
     except Exception as e:
         print(f"❌ Error during ensemble prediction: {e}")
         return EnsemblePredictionResponse(success=False, error=str(e))
+
+
+@app.post("/predict/detailed", response_model=EnsemblePredictionResponse)
+async def detailed_ensemble_predict(file: UploadFile = File(...)):
+    """
+    Advanced ensemble prediction with detailed analytics like the notebook
+    """
+    start_time = datetime.now()
+    
+    try:
+        # Validate file type
+        if not file.content_type.startswith("image/"):
+            raise HTTPException(status_code=400, detail="File must be an image")
+
+        # Read and process image
+        image_data = await file.read()
+        image = Image.open(io.BytesIO(image_data))
+        
+        # Convert to RGB if needed
+        if image.mode != 'RGB':
+            image = image.convert('RGB')
+        
+        # Resize to model input size
+        image = image.resize((IMG_WIDTH, IMG_HEIGHT))
+        image_array = np.array(image).astype(np.float32) / 255.0
+        image_array = np.expand_dims(image_array, axis=0)
+
+        # Load models
+        model1 = lazy_load_model1()
+        model2 = lazy_load_model2()
+        
+        if model1 is None and model2 is None:
+            raise HTTPException(status_code=503, detail="No models available")
+
+        individual_predictions = []
+        
+        # Model 1 (UNet) prediction
+        if model1 is not None:
+            try:
+                pred_start = datetime.now()
+                prediction1 = model1.predict(image_array, verbose=0)
+                pred_time = (datetime.now() - pred_start).total_seconds()
+                
+                # Detailed analysis like notebook
+                predicted_classes = np.argmax(prediction1, axis=3)[0]
+                confidence_map = np.max(prediction1, axis=3)[0]
+                
+                # Calculate class distribution
+                class_counts = {i: int(np.sum(predicted_classes == i)) for i in range(5)}
+                total_pixels = int(predicted_classes.size)
+                oil_spill_pixels = class_counts.get(1, 0)
+                oil_spill_percentage = oil_spill_pixels / total_pixels
+                
+                # Advanced confidence metrics
+                mean_confidence = float(np.mean(confidence_map))
+                max_confidence = float(np.max(confidence_map))
+                confidence_std = float(np.std(confidence_map))
+                
+                # Oil spill detection logic - more sensitive like notebook
+                if oil_spill_percentage > 0.005:  # 0.5% threshold
+                    unet_prediction = "Oil Spill Detected"
+                    unet_confidence = min(0.95, max(0.6, oil_spill_percentage * 15 + mean_confidence * 0.6))
+                else:
+                    unet_prediction = "No Oil Spill"
+                    unet_confidence = min(0.95, max(0.6, (1.0 - oil_spill_percentage) * mean_confidence))
+                
+                # Generate mask
+                mask1 = generate_prediction_mask(image_array, model1)
+                
+                individual_predictions.append(ModelPrediction(
+                    model_name="UNet",
+                    prediction=unet_prediction,
+                    confidence=float(unet_confidence),
+                    processing_time=pred_time,
+                    prediction_mask=mask1
+                ))
+                
+                print(f"UNet: {unet_prediction} ({unet_confidence:.3f}) - Oil: {oil_spill_percentage*100:.2f}%")
+                
+            except Exception as e:
+                print(f"Error with UNet model: {e}")
+
+        # Model 2 (DeepLab) prediction
+        if model2 is not None:
+            try:
+                pred_start = datetime.now()
+                prediction2 = model2.predict(image_array, verbose=0)
+                pred_time = (datetime.now() - pred_start).total_seconds()
+                
+                # Detailed analysis like notebook
+                predicted_classes = np.argmax(prediction2, axis=3)[0]
+                confidence_map = np.max(prediction2, axis=3)[0]
+                
+                # Calculate class distribution
+                class_counts = {i: int(np.sum(predicted_classes == i)) for i in range(5)}
+                total_pixels = int(predicted_classes.size)
+                oil_spill_pixels = class_counts.get(1, 0)
+                oil_spill_percentage = oil_spill_pixels / total_pixels
+                
+                # Advanced confidence metrics
+                mean_confidence = float(np.mean(confidence_map))
+                max_confidence = float(np.max(confidence_map))
+                confidence_std = float(np.std(confidence_map))
+                
+                # Oil spill detection logic - more sensitive like notebook
+                if oil_spill_percentage > 0.005:  # 0.5% threshold
+                    deeplab_prediction = "Oil Spill Detected"
+                    deeplab_confidence = min(0.95, max(0.6, oil_spill_percentage * 15 + mean_confidence * 0.6))
+                else:
+                    deeplab_prediction = "No Oil Spill"
+                    deeplab_confidence = min(0.95, max(0.6, (1.0 - oil_spill_percentage) * mean_confidence))
+                
+                # Generate mask
+                mask2 = generate_prediction_mask(image_array, model2)
+                
+                individual_predictions.append(ModelPrediction(
+                    model_name="DeepLabV3+",
+                    prediction=deeplab_prediction,
+                    confidence=float(deeplab_confidence),
+                    processing_time=pred_time,
+                    prediction_mask=mask2
+                ))
+                
+                print(f"DeepLab: {deeplab_prediction} ({deeplab_confidence:.3f}) - Oil: {oil_spill_percentage*100:.2f}%")
+                
+            except Exception as e:
+                print(f"Error with DeepLab model: {e}")
+
+        if not individual_predictions:
+            raise HTTPException(status_code=503, detail="All models failed to make predictions")
+
+        # Ensemble prediction - weighted by model performance
+        oil_spill_votes = 0
+        total_confidence = 0
+        weights = {"UNet": 0.9356, "DeepLabV3+": 0.9668}  # F1 scores
+        total_weight = 0
+        
+        for pred in individual_predictions:
+            weight = weights.get(pred.model_name, 0.8)
+            total_weight += weight
+            total_confidence += pred.confidence * weight
+            
+            if "Oil Spill Detected" in pred.prediction:
+                oil_spill_votes += weight
+
+        # Ensemble decision
+        ensemble_confidence = total_confidence / total_weight if total_weight > 0 else 0.5
+        oil_spill_ratio = oil_spill_votes / total_weight if total_weight > 0 else 0
+        
+        if oil_spill_ratio > 0.4:  # If weighted votes > 40%
+            ensemble_prediction = "Oil Spill Detected"
+            ensemble_confidence = max(0.6, min(0.95, ensemble_confidence))
+        else:
+            ensemble_prediction = "No Oil Spill"
+            ensemble_confidence = max(0.6, min(0.95, 1.0 - oil_spill_ratio + 0.2))
+
+        # Generate ensemble mask (simple combination for now)
+        ensemble_mask = individual_predictions[0].prediction_mask if individual_predictions else None
+
+        total_time = (datetime.now() - start_time).total_seconds()
+        
+        print(f"Ensemble result: {ensemble_prediction} ({ensemble_confidence:.3f}) - Total time: {total_time:.2f}s")
+
+        return EnsemblePredictionResponse(
+            success=True,
+            individual_predictions=individual_predictions,
+            ensemble_prediction=ensemble_prediction,
+            ensemble_confidence=ensemble_confidence,
+            ensemble_mask=ensemble_mask,
+            total_processing_time=total_time
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Unexpected error in detailed prediction: {e}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
 
 
 @app.get("/")

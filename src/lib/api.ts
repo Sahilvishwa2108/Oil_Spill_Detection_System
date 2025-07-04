@@ -140,6 +140,28 @@ export class ApiClient {
       body: formData,
     });
   }
+
+  async detailedEnsemblePredict(file: File) {
+    if (!file) {
+      throw new ApiError(400, 'No file provided');
+    }
+    
+    if (!file.type.startsWith('image/')) {
+      throw new ApiError(400, 'File must be an image');
+    }
+    
+    if (file.size > 10 * 1024 * 1024) { // 10MB limit
+      throw new ApiError(400, 'File size must be less than 10MB');
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    return this.makeRequest(`${this.baseUrl}/predict/detailed`, {
+      method: 'POST',
+      body: formData,
+    });
+  }
 }
 
 export const apiClient = new ApiClient();
