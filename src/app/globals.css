@@ -118,5 +118,180 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
+  
+  /* AI-themed animations */
+  @keyframes pulse-glow {
+    0%, 100% { 
+      box-shadow: 0 0 5px rgba(59, 130, 246, 0.4);
+    }
+    50% { 
+      box-shadow: 0 0 20px rgba(59, 130, 246, 0.6), 0 0 30px rgba(59, 130, 246, 0.4);
+    }
+  }
+  
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+  
+  @keyframes neural-pulse {
+    0%, 100% { 
+      background-size: 100% 100%;
+      opacity: 0.8;
+    }
+    50% { 
+      background-size: 110% 110%;
+      opacity: 1;
+    }
+  }
+  
+  @keyframes data-flow {
+    0% { 
+      background-position: 0% 50%;
+    }
+    50% { 
+      background-position: 100% 50%;
+    }
+    100% { 
+      background-position: 0% 50%;
+    }
+  }
+  
+  @keyframes holographic {
+    0% { 
+      background-position: 0% 50%;
+      filter: hue-rotate(0deg);
+    }
+    50% { 
+      background-position: 100% 50%;
+      filter: hue-rotate(180deg);
+    }
+    100% { 
+      background-position: 0% 50%;
+      filter: hue-rotate(360deg);
+    }
+  }
+  
+  .ai-glow {
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+  
+  .ai-float {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  .neural-bg {
+    background: linear-gradient(45deg, #0ea5e9, #3b82f6, #6366f1, #8b5cf6, #a855f7);
+    background-size: 400% 400%;
+    animation: neural-pulse 4s ease-in-out infinite;
+  }
+  
+  .data-flow-bg {
+    background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.1), transparent);
+    background-size: 200% 100%;
+    animation: data-flow 3s linear infinite;
+  }
+  
+  .holographic-bg {
+    background: linear-gradient(45deg, #06b6d4, #3b82f6, #6366f1, #8b5cf6, #ec4899);
+    background-size: 400% 400%;
+    animation: holographic 8s ease-in-out infinite;
+  }
+  
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    background: rgba(148, 163, 184, 0.1);
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom, #3b82f6, #1d4ed8);
+    border-radius: 4px;
+  }
+  
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(to bottom, #1d4ed8, #1e40af);
+  }
+  
+  /* Futuristic glass effect */
+  .glass-morphism {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+  }
+  
+  .dark .glass-morphism {
+    background: rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  /* Neural network connection lines */
+  .neural-connections::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+      radial-gradient(circle at 25% 25%, rgba(59, 130, 246, 0.1) 1px, transparent 1px),
+      radial-gradient(circle at 75% 75%, rgba(139, 92, 246, 0.1) 1px, transparent 1px);
+    background-size: 60px 60px;
+    animation: neural-connections 10s linear infinite;
+  }
+  
+  @keyframes neural-connections {
+    0% { transform: translate(0, 0); }
+    100% { transform: translate(-60px, -60px); }
+  }
+  
+  /* Gradient text animations */
+  .gradient-text-animate {
+    background: linear-gradient(45deg, #3b82f6, #8b5cf6, #ec4899, #06b6d4);
+    background-size: 400% 400%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: gradient-shift 3s ease-in-out infinite;
+  }
+  
+  @keyframes gradient-shift {
+    0%, 100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+  
+  /* AI processing indicator */
+  .ai-processing {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .ai-processing::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.3), transparent);
+    animation: ai-scan 2s linear infinite;
+  }
+  
+  @keyframes ai-scan {
+    0% { left: -100%; }
+    100% { left: 100%; }
+  }
+}
+
+/* Improved font family */
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-feature-settings: 'liga' 1, 'calt' 1;
 }

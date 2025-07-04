@@ -4,10 +4,9 @@ import * as React from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { Separator } from "@/components/ui/separator"
 import { motion } from "framer-motion"
-import { Clock, Zap, Target, Activity, Users, BarChart3, TrendingUp, AlertTriangle, Brain } from "lucide-react"
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from "recharts"
+import { Clock, Zap, Target, Activity, Users, Brain, BarChart3, TrendingUp } from "lucide-react"
+import { BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, CartesianGrid, XAxis, YAxis, Tooltip } from "recharts"
 import { EnsemblePredictionResult } from "@/types/api"
 
 interface PredictionResultsProps {
@@ -36,7 +35,7 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
   const hasOilSpill = confidencePercentage > 50
 
   // Prepare data for charts
-  const modelComparisonData = result.individual_predictions?.map((pred, index) => ({
+  const modelComparisonData = result.individual_predictions?.map((pred) => ({
     name: pred.model_name,
     confidence: Math.round(pred.confidence * 100),
     time: pred.processing_time,
@@ -47,12 +46,6 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
     { name: 'Oil Spill', value: confidencePercentage, color: COLORS[3] },
     { name: 'Clean Water', value: 100 - confidencePercentage, color: COLORS[1] }
   ]
-
-  const processingTimeData = result.individual_predictions?.map((pred, index) => ({
-    name: pred.model_name,
-    time: pred.processing_time * 1000, // Convert to milliseconds for better visualization
-    efficiency: Math.max(0, 100 - (pred.processing_time * 50))
-  })) || []
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -272,90 +265,247 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
         </motion.div>
       )}
 
-      {/* Image Comparison */}
+      {/* Magical AI Prediction Flow */}
       <motion.div variants={itemVariants}>
-        <Card>
+        <Card className="bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 dark:from-slate-900 dark:via-blue-950 dark:to-cyan-950 border-2 border-blue-200 dark:border-blue-800">
           <CardHeader>
-            <CardTitle>Image Analysis</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <motion.div
+                animate={{ 
+                  rotate: [0, 360],
+                  scale: [1, 1.2, 1]
+                }}
+                transition={{ 
+                  duration: 3, 
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }}
+              >
+                <Brain className="w-6 h-6 text-purple-600" />
+              </motion.div>
+              AI Prediction Pipeline
+            </CardTitle>
             <CardDescription>
-              Original image and AI-generated detection masks
+              Step-by-step neural network analysis with magical transitions
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {originalImage && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5 }}
-                >
-                  <div className="space-y-3">
-                    <h4 className="font-medium text-center">Original Image</h4>
-                    <div className="aspect-square relative bg-muted rounded-lg overflow-hidden">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={originalImage}
-                        alt="Original"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-              
-              {/* Individual Model Prediction Masks */}
-              {result.individual_predictions?.map((modelResult, index) => (
-                modelResult.prediction_mask && (
+            <div className="space-y-8">
+              {/* Step-by-step prediction flow */}
+              <div className="relative">
+                {/* Progress Line */}
+                <div className="absolute top-24 left-1/2 transform -translate-x-1/2 w-0.5 h-full bg-gradient-to-b from-cyan-400 via-blue-500 to-purple-600 opacity-30" />
+                
+                {/* Original Image */}
+                {originalImage && (
                   <motion.div
-                    key={`mask-${index}`}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.5, delay: 0.1 * (index + 1) }}
+                    initial={{ opacity: 0, x: -50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.8 }}
+                    className="relative mb-8"
                   >
-                    <div className="space-y-3">
-                      <h4 className="font-medium text-center">{modelResult.model_name} Detection</h4>
-                      <div className="aspect-square relative bg-muted rounded-lg overflow-hidden">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={`data:image/png;base64,${modelResult.prediction_mask}`}
-                          alt={`${modelResult.model_name} prediction mask`}
-                          className="w-full h-full object-cover"
+                    <div className="flex items-center gap-4">
+                      <div className="w-40 h-40 relative">
+                        <motion.div
+                          className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 rounded-xl blur-lg"
+                          animate={{
+                            scale: [1, 1.1, 1],
+                            opacity: [0.3, 0.6, 0.3]
+                          }}
+                          transition={{ duration: 2, repeat: Infinity }}
                         />
+                        <div className="relative bg-white dark:bg-gray-900 rounded-xl overflow-hidden border-2 border-cyan-200 dark:border-cyan-800">
+                          <img
+                            src={originalImage}
+                            alt="Original"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground text-center">
-                        Highlighted areas show detected oil spills
-                      </p>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <motion.div
+                            className="w-3 h-3 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-full"
+                            animate={{ scale: [1, 1.2, 1] }}
+                            transition={{ duration: 1.5, repeat: Infinity }}
+                          />
+                          <h4 className="font-semibold text-lg">Original Image</h4>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Input satellite/aerial imagery ready for neural network analysis
+                        </p>
+                      </div>
                     </div>
                   </motion.div>
-                )
-              ))}
-
-              {/* Ensemble Prediction Mask */}
-              {result.ensemble_mask && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5, delay: 0.3 }}
-                >
-                  <div className="space-y-3">
-                    <h4 className="font-medium text-center flex items-center justify-center gap-2">
-                      <Zap className="w-4 h-4" />
-                      Ensemble Detection
-                    </h4>
-                    <div className="aspect-square relative bg-muted rounded-lg overflow-hidden">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={`data:image/png;base64,${result.ensemble_mask}`}
-                        alt="Ensemble prediction mask"
-                        className="w-full h-full object-cover"
-                      />
+                )}
+                
+                {/* Model Predictions */}
+                {result.individual_predictions?.map((modelResult, index) => (
+                  modelResult.prediction_mask && (
+                    <motion.div
+                      key={`step-${index}`}
+                      initial={{ opacity: 0, x: index % 2 === 0 ? -50 : 50 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.8, delay: 0.3 * (index + 1) }}
+                      className="relative mb-8"
+                    >
+                      <div className={`flex items-center gap-4 ${index % 2 === 1 ? 'flex-row-reverse' : ''}`}>
+                        <div className="w-40 h-40 relative">
+                          <motion.div
+                            className={`absolute inset-0 rounded-xl blur-lg ${
+                              modelResult.model_name === 'UNet' 
+                                ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/20' 
+                                : 'bg-gradient-to-r from-purple-500/20 to-pink-500/20'
+                            }`}
+                            animate={{
+                              scale: [1, 1.1, 1],
+                              opacity: [0.3, 0.6, 0.3]
+                            }}
+                            transition={{ duration: 2, repeat: Infinity, delay: 0.5 * index }}
+                          />
+                          <div className={`relative bg-white dark:bg-gray-900 rounded-xl overflow-hidden border-2 ${
+                            modelResult.model_name === 'UNet' 
+                              ? 'border-green-200 dark:border-green-800' 
+                              : 'border-purple-200 dark:border-purple-800'
+                          }`}>
+                            <img
+                              src={`data:image/png;base64,${modelResult.prediction_mask}`}
+                              alt={`${modelResult.model_name} prediction`}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          
+                          {/* Confidence Badge */}
+                          <motion.div
+                            className="absolute -top-2 -right-2"
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ duration: 0.5, delay: 0.5 * (index + 1) }}
+                          >
+                            <Badge className={`${
+                              modelResult.model_name === 'UNet' 
+                                ? 'bg-green-500 hover:bg-green-600' 
+                                : 'bg-purple-500 hover:bg-purple-600'
+                            } text-white`}>
+                              {Math.round(modelResult.confidence * 100)}%
+                            </Badge>
+                          </motion.div>
+                        </div>
+                        
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <motion.div
+                              className={`w-3 h-3 rounded-full ${
+                                modelResult.model_name === 'UNet' 
+                                  ? 'bg-gradient-to-r from-green-400 to-emerald-500' 
+                                  : 'bg-gradient-to-r from-purple-400 to-pink-500'
+                              }`}
+                              animate={{ scale: [1, 1.2, 1] }}
+                              transition={{ duration: 1.5, repeat: Infinity, delay: 0.3 * index }}
+                            />
+                            <h4 className="font-semibold text-lg">{modelResult.model_name}</h4>
+                          </div>
+                          <p className="text-sm text-muted-foreground mb-2">
+                            {modelResult.model_name === 'UNet' 
+                              ? 'Fast semantic segmentation with U-Net architecture' 
+                              : 'High-accuracy detection with DeepLab V3+ model'}
+                          </p>
+                          <div className="flex items-center gap-4 text-sm">
+                            <div className="flex items-center gap-1">
+                              <Target className="w-4 h-4 text-blue-500" />
+                              <span>Confidence: {Math.round(modelResult.confidence * 100)}%</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Clock className="w-4 h-4 text-gray-500" />
+                              <span>{modelResult.processing_time?.toFixed(2)}s</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )
+                ))}
+                
+                {/* Ensemble Result */}
+                {result.ensemble_mask && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 1, delay: 0.8 }}
+                    className="relative"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-40 h-40 relative">
+                        <motion.div
+                          className="absolute inset-0 bg-gradient-to-r from-yellow-500/20 via-orange-500/20 to-red-500/20 rounded-xl blur-lg"
+                          animate={{
+                            scale: [1, 1.2, 1],
+                            rotate: [0, 360],
+                            opacity: [0.4, 0.8, 0.4]
+                          }}
+                          transition={{ duration: 3, repeat: Infinity }}
+                        />
+                        <div className="relative bg-white dark:bg-gray-900 rounded-xl overflow-hidden border-2 border-yellow-200 dark:border-yellow-800">
+                          <img
+                            src={`data:image/png;base64,${result.ensemble_mask}`}
+                            alt="Ensemble prediction"
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        
+                        {/* Final Result Badge */}
+                        <motion.div
+                          className="absolute -top-2 -right-2"
+                          initial={{ scale: 0 }}
+                          animate={{ scale: 1 }}
+                          transition={{ duration: 0.5, delay: 1 }}
+                        >
+                          <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white">
+                            Final
+                          </Badge>
+                        </motion.div>
+                      </div>
+                      
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <motion.div
+                            className="w-3 h-3 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full"
+                            animate={{ 
+                              scale: [1, 1.3, 1],
+                              boxShadow: [
+                                "0 0 0 0 rgba(251, 191, 36, 0.7)",
+                                "0 0 0 10px rgba(251, 191, 36, 0)",
+                                "0 0 0 0 rgba(251, 191, 36, 0)"
+                              ]
+                            }}
+                            transition={{ duration: 2, repeat: Infinity }}
+                          />
+                          <h4 className="font-bold text-lg">Ensemble Detection</h4>
+                          <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                          >
+                            <Zap className="w-5 h-5 text-yellow-500" />
+                          </motion.div>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          Combined intelligence from all neural networks for maximum accuracy
+                        </p>
+                        <div className="flex items-center gap-4 text-sm">
+                          <div className="flex items-center gap-1">
+                            <Activity className="w-4 h-4 text-green-500" />
+                            <span>Ensemble: {confidencePercentage}%</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-4 h-4 text-gray-500" />
+                            <span>Total: {result.total_processing_time?.toFixed(2)}s</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-xs text-muted-foreground text-center">
-                      Combined detection from all models
-                    </p>
-                  </div>
-                </motion.div>
-              )}
+                  </motion.div>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>

@@ -16,11 +16,9 @@ import {
   List
 } from "lucide-react"
 import { 
-  TEST_IMAGES, 
   ALL_TEST_IMAGES, 
   getRandomTestImages,
   getImagesByCategory,
-  getImagesByDifficulty,
   DIFFICULTY_COLORS, 
   CATEGORY_ICONS,
   CATEGORIES,
