@@ -10,8 +10,11 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { PredictionResults } from "@/components/prediction-results"
+import { AdvancedAnalytics } from "@/components/advanced-analytics"
+import { TestImageGallery } from "@/components/test-image-gallery"
 import { apiClient } from "@/lib/api"
 import { HealthStatus, ModelInfo, EnsemblePredictionResult } from "@/types/api"
+import { motion, AnimatePresence } from "framer-motion"
 import { 
   Upload, 
   Zap, 
@@ -20,10 +23,15 @@ import {
   Brain,
   Image as ImageIcon,
   BarChart3,
-  AlertCircle
+  AlertCircle,
+  Cpu,
+  Target,
+  TrendingUp,
+  Sparkles
 } from "lucide-react"
 
-export default function Dashboard() {  // State management
+export default function Dashboard() {
+  // State management
   const [files, setFiles] = useState<File[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [prediction, setPrediction] = useState<EnsemblePredictionResult | null>(null)
@@ -33,6 +41,8 @@ export default function Dashboard() {  // State management
   const [error, setError] = useState<string>("")
   const [retryCount, setRetryCount] = useState<number>(0)
   const [isRetrying, setIsRetrying] = useState<boolean>(false)
+  const [selectedTestCategory, setSelectedTestCategory] = useState<string>("all")
+  const [showAdvancedAnalytics, setShowAdvancedAnalytics] = useState<boolean>(false)
   // Load initial data
   useEffect(() => {
     loadHealthStatus()
@@ -148,6 +158,48 @@ export default function Dashboard() {  // State management
 
   const handleFileUploadError = (error: string) => {
     setError(error)
+  }
+
+  const handleTestImageSelect = async (imageUrl: string, imageName: string) => {
+    try {
+      // Fetch the image and convert to File object
+      const response = await fetch(imageUrl)
+      const blob = await response.blob()
+      const file = new File([blob], imageName, { type: blob.type })
+      
+      // Set the file and trigger prediction
+      setFiles([file])
+      setError("")
+      
+      // Auto-predict when test image is selected
+      setTimeout(() => {
+        const fileInput = [file]
+        if (fileInput.length > 0) {
+          setIsLoading(true)
+          setPrediction(null)
+          
+          // Create preview URL
+          setOriginalImageUrl(URL.createObjectURL(file))
+          
+          // Trigger prediction
+          apiClient.detailedEnsemblePredict(file)
+            .then(result => {
+              setPrediction(result)
+              setError("")
+            })
+            .catch(err => {
+              console.error("Test image prediction error:", err)
+              setError(`Failed to analyze test image: ${err.message}`)
+            })
+            .finally(() => {
+              setIsLoading(false)
+            })
+        }
+      }, 100)
+    } catch (error) {
+      console.error("Failed to load test image:", error)
+      setError("Failed to load test image. Please try again.")
+    }
   }
 
   const isBackendHealthy = healthStatus?.status === "healthy"
@@ -304,10 +356,14 @@ export default function Dashboard() {  // State management
         </div>
 
         <Tabs defaultValue="prediction" className="space-y-8">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="prediction" className="flex items-center gap-2">
               <Zap className="w-4 h-4" />
               Prediction
+            </TabsTrigger>
+            <TabsTrigger value="test-gallery" className="flex items-center gap-2">
+              <ImageIcon className="w-4 h-4" />
+              Test Images
             </TabsTrigger>
             <TabsTrigger value="models" className="flex items-center gap-2">
               <Brain className="w-4 h-4" />
@@ -350,95 +406,184 @@ export default function Dashboard() {  // State management
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Input Section */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Upload className="w-5 h-5" />
-                    Upload Image
-                  </CardTitle>
-                  <CardDescription>
-                    Upload satellite or aerial imagery for oil spill detection
-                  </CardDescription>
-                </CardHeader>                <CardContent className="space-y-6">                  <FileUpload
-                    onFilesChange={setFiles}
-                    disabled={isLoading || isRetrying}
-                    onError={handleFileUploadError}
-                    maxSize={5} // 5MB limit
-                  />
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Upload className="w-5 h-5" />
+                      Upload Image
+                    </CardTitle>
+                    <CardDescription>
+                      Upload satellite or aerial imagery for oil spill detection
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <FileUpload
+                      onFilesChange={setFiles}
+                      disabled={isLoading || isRetrying}
+                      onError={handleFileUploadError}
+                      maxSize={5} // 5MB limit
+                    />
 
-                  <div className="text-sm text-muted-foreground bg-blue-50 dark:bg-blue-950 p-3 rounded-lg">
-                    <p className="font-medium text-blue-900 dark:text-blue-100 mb-1">Ensemble Prediction</p>
-                    <p className="text-blue-700 dark:text-blue-300">
-                      Both U-Net and DeepLab V3+ models will analyze your image simultaneously for the most accurate results.
-                    </p>
-                  </div>
-
-                  <div className="flex gap-3">                    <Button
-                      onClick={handlePredict}
-                      disabled={isLoading || isRetrying || files.length === 0 || !isBackendHealthy}
-                      className="flex-1"
+                    <motion.div 
+                      className="text-sm text-muted-foreground bg-blue-50 dark:bg-blue-950 p-3 rounded-lg"
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.3, delay: 0.1 }}
                     >
-                      {isLoading || isRetrying ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
-                          {isRetrying ? `Retrying... (${retryCount}/3)` : "Analyzing..."}
-                        </>
-                      ) : (
-                        <>
-                          <Zap className="w-4 h-4 mr-2" />
-                          Detect Oil Spill
-                        </>
+                      <p className="font-medium text-blue-900 dark:text-blue-100 mb-1">Ensemble Prediction</p>
+                      <p className="text-blue-700 dark:text-blue-300">
+                        Both U-Net and DeepLab V3+ models will analyze your image simultaneously for the most accurate results.
+                      </p>
+                    </motion.div>
+
+                    <div className="flex gap-3">
+                      <motion.div
+                        className="flex-1"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Button
+                          onClick={handlePredict}
+                          disabled={isLoading || isRetrying || files.length === 0 || !isBackendHealthy}
+                          className="w-full"
+                        >
+                          {isLoading || isRetrying ? (
+                            <>
+                              <motion.div 
+                                className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full mr-2"
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                              />
+                              {isRetrying ? `Retrying... (${retryCount}/3)` : "Analyzing..."}
+                            </>
+                          ) : (
+                            <>
+                              <Zap className="w-4 h-4 mr-2" />
+                              Detect Oil Spill
+                            </>
+                          )}
+                        </Button>
+                      </motion.div>
+                      
+                      {prediction && (
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.8 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          <Button variant="outline" onClick={resetPrediction}>
+                            Reset
+                          </Button>
+                        </motion.div>
                       )}
-                    </Button>
-                    
-                    {prediction && (
-                      <Button variant="outline" onClick={resetPrediction}>
-                        Reset
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
 
               {/* Quick Stats */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Info className="w-5 h-5" />
-                    Quick Stats
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="text-center p-4 bg-muted rounded-lg">
-                        <div className="text-2xl font-bold text-blue-600">2</div>
-                        <div className="text-sm text-muted-foreground">AI Models</div>
+              <motion.div
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.5, delay: 0.1 }}
+              >
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Info className="w-5 h-5" />
+                      Quick Stats
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <motion.div 
+                          className="text-center p-4 bg-muted rounded-lg"
+                          whileHover={{ scale: 1.05 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <motion.div 
+                            className="text-2xl font-bold text-blue-600"
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ duration: 0.5, delay: 0.3 }}
+                          >
+                            2
+                          </motion.div>
+                          <div className="text-sm text-muted-foreground">AI Models</div>
+                        </motion.div>
+                        <motion.div 
+                          className="text-center p-4 bg-muted rounded-lg"
+                          whileHover={{ scale: 1.05 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <motion.div 
+                            className="text-2xl font-bold text-green-600"
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ duration: 0.5, delay: 0.4 }}
+                          >
+                            95%
+                          </motion.div>
+                          <div className="text-sm text-muted-foreground">Accuracy</div>
+                        </motion.div>
                       </div>
-                      <div className="text-center p-4 bg-muted rounded-lg">
-                        <div className="text-2xl font-bold text-green-600">95%</div>
-                        <div className="text-sm text-muted-foreground">Accuracy</div>
-                      </div>
+                      
+                      <motion.div 
+                        className="text-center p-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950 rounded-lg"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5, delay: 0.5 }}
+                      >
+                        <ImageIcon className="w-8 h-8 mx-auto mb-2 text-blue-600" />
+                        <div className="text-sm">
+                          Supports: PNG, JPG, JPEG, GIF, BMP, TIFF
+                        </div>
+                      </motion.div>
                     </div>
-                    
-                    <div className="text-center p-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950 rounded-lg">
-                      <ImageIcon className="w-8 h-8 mx-auto mb-2 text-blue-600" />
-                      <div className="text-sm">
-                        Supports: PNG, JPG, JPEG, GIF, BMP, TIFF
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </motion.div>
             </div>
 
             {/* Results Section */}
-            {prediction && (
-              <PredictionResults 
-                result={prediction} 
-                originalImage={originalImageUrl}
-              />
-            )}
+            <AnimatePresence mode="wait">
+              {prediction && (
+                <motion.div
+                  key="prediction-results"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <PredictionResults 
+                    result={prediction} 
+                    originalImage={originalImageUrl}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </TabsContent>
+
+          {/* Test Gallery Tab */}
+          <TabsContent value="test-gallery" className="space-y-6">
+            <div className="text-center mb-6">
+              <h3 className="text-2xl font-semibold mb-2">Test Image Gallery</h3>
+              <p className="text-muted-foreground">
+                Try our AI models with curated test images of varying difficulty levels
+              </p>
+            </div>
+            
+            <TestImageGallery 
+              onImageSelect={handleTestImageSelect}
+              selectedCategory={selectedTestCategory}
+              onCategoryChange={setSelectedTestCategory}
+            />
           </TabsContent>
 
           {/* Models Tab */}
@@ -478,54 +623,139 @@ export default function Dashboard() {  // State management
 
           {/* Analytics Tab */}
           <TabsContent value="analytics" className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Detection Accuracy</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-green-600 mb-2">95.2%</div>
-                  <Progress value={95.2} className="mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    Average accuracy across validation dataset
-                  </p>
-                </CardContent>
-              </Card>
+            {prediction ? (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                <AdvancedAnalytics result={prediction} />
+              </motion.div>
+            ) : (
+              <div className="text-center py-12">
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.5, delay: 0.1 }}
+                    >
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <Target className="w-5 h-5 text-green-600" />
+                            Detection Accuracy
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-3xl font-bold text-green-600 mb-2">95.2%</div>
+                          <Progress value={95.2} className="mb-2" />
+                          <p className="text-sm text-muted-foreground">
+                            Average accuracy across validation dataset
+                          </p>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Processing Speed</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold text-blue-600 mb-2">1.2s</div>
-                  <p className="text-sm text-muted-foreground">
-                    Average processing time per image
-                  </p>
-                </CardContent>
-              </Card>
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.5, delay: 0.2 }}
+                    >
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <Cpu className="w-5 h-5 text-blue-600" />
+                            Processing Speed
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="text-3xl font-bold text-blue-600 mb-2">1.2s</div>
+                          <div className="text-sm text-muted-foreground mb-2">
+                            Average processing time per image
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="h-2 bg-blue-100 rounded-full flex-1">
+                              <motion.div 
+                                className="h-full bg-blue-600 rounded-full"
+                                initial={{ width: 0 }}
+                                animate={{ width: "75%" }}
+                                transition={{ duration: 1.5, delay: 0.5 }}
+                              />
+                            </div>
+                            <span className="text-xs text-muted-foreground">Fast</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Model Performance</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm">Precision</span>
-                      <span className="text-sm font-medium">94.8%</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm">Recall</span>
-                      <span className="text-sm font-medium">95.6%</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-sm">F1-Score</span>
-                      <span className="text-sm font-medium">95.2%</span>
-                    </div>
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.5, delay: 0.3 }}
+                    >
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                            <TrendingUp className="w-5 h-5 text-purple-600" />
+                            Model Performance
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-3">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm">Precision</span>
+                              <span className="text-sm font-medium">94.8%</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm">Recall</span>
+                              <span className="text-sm font-medium">95.6%</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm">F1-Score</span>
+                              <span className="text-sm font-medium">95.2%</span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
+
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.4 }}
+                    className="bg-muted/50 rounded-lg p-8"
+                  >
+                    <div className="flex items-center justify-center gap-3 mb-4">
+                      <Sparkles className="w-6 h-6 text-blue-600" />
+                      <h3 className="text-xl font-semibold">Advanced Analytics</h3>
+                    </div>
+                    <p className="text-muted-foreground mb-4">
+                      Upload an image or select from our test gallery to see detailed AI analytics including:
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full" />
+                        <span>Confidence distribution across models</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full" />
+                        <span>Risk assessment and severity analysis</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-purple-500 rounded-full" />
+                        <span>Model agreement and ensemble metrics</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-orange-500 rounded-full" />
+                        <span>Processing performance statistics</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                </div>
+              </div>
+            )}
           </TabsContent>
         </Tabs>
       </div>
