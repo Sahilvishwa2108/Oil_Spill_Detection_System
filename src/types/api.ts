@@ -1,15 +1,17 @@
+import { ModelName, ClassName } from "@/constants";
+
 export interface PredictionResult {
   success: boolean;
   prediction?: string;
   confidence?: number;
   processing_time?: number;
-  model_used?: string;
+  model_used?: ModelName;
   error?: string;
   prediction_mask?: string; // Base64 encoded image
 }
 
 export interface ModelPrediction {
-  model_name: string;
+  model_name: ModelName;
   prediction: string;
   confidence: number;
   processing_time: number;
@@ -27,12 +29,15 @@ export interface EnsemblePredictionResult {
 }
 
 export interface ModelInfo {
-  name: string;
+  name: ModelName;
   description: string;
   loaded: boolean;
   architecture?: string;
   f1_score?: number;
+  accuracy?: number;
   size_mb?: number;
+  parameters?: string;
+  training_epochs?: number;
   status?: string;
 }
 

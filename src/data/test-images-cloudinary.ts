@@ -1,5 +1,6 @@
 // Test images data - hosted on Cloudinary for production
 // Total images available: 110
+// Each image can result in either "Oil Spill Detected" or "No Oil Spill" prediction
 
 export interface TestImage {
   id: number;

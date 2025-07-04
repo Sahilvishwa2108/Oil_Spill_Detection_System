@@ -1,5 +1,8 @@
+import { API_CONFIG } from "@/constants";
+import { PredictionResult, EnsemblePredictionResult, ModelsResponse, HealthStatus, BatchPredictionResponse } from "@/types/api";
+
 // API Configuration
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+export const API_BASE_URL = API_CONFIG.BASE_URL;
 
 // Custom API Error class
 export class ApiError extends Error {
@@ -65,47 +68,47 @@ export class ApiClient {
     }
   }
 
-  async healthCheck() {
-    return this.makeRequest(`${this.baseUrl}/health`);
+  async healthCheck(): Promise<HealthStatus> {
+    return this.makeRequest(`${this.baseUrl}${API_CONFIG.ENDPOINTS.HEALTH}`);
   }
 
-  async getModelsInfo() {
-    return this.makeRequest(`${this.baseUrl}/models/info`);
+  async getModelsInfo(): Promise<ModelsResponse> {
+    return this.makeRequest(`${this.baseUrl}${API_CONFIG.ENDPOINTS.MODELS_INFO}`);
   }
-  async predictOilSpill(file: File, modelChoice: string = 'model1') {
+  async predictOilSpill(file: File, modelChoice: string = 'model1'): Promise<PredictionResult> {
     if (!file) {
       throw new ApiError(400, 'No file provided');
     }
     
     if (!file.type.startsWith('image/')) {
-      throw new ApiError(400, 'File must be an image');
+      throw new ApiError(400, 'File must be a supported image format (PNG, JPEG, JPG, GIF, BMP, TIFF)');
     }
     
-    if (file.size > 10 * 1024 * 1024) { // 10MB limit
-      throw new ApiError(400, 'File size must be less than 10MB');
+    if (file.size > API_CONFIG.FILE_LIMITS.MAX_SIZE_MB * 1024 * 1024) {
+      throw new ApiError(400, `File size must be less than ${API_CONFIG.FILE_LIMITS.MAX_SIZE_MB}MB`);
     }
 
     const formData = new FormData();
     formData.append('file', file);
     formData.append('model_choice', modelChoice);
 
-    return this.makeRequest(`${this.baseUrl}/predict`, {
+    return this.makeRequest(`${this.baseUrl}${API_CONFIG.ENDPOINTS.PREDICT}`, {
       method: 'POST',
       body: formData,
     });
   }
 
-  async ensemblePredict(file: File) {
+  async ensemblePredict(file: File): Promise<EnsemblePredictionResult> {
     if (!file) {
       throw new ApiError(400, 'No file provided');
     }
     
     if (!file.type.startsWith('image/')) {
-      throw new ApiError(400, 'File must be an image');
+      throw new ApiError(400, 'File must be a supported image format (PNG, JPEG, JPG, GIF, BMP, TIFF)');
     }
     
-    if (file.size > 10 * 1024 * 1024) { // 10MB limit
-      throw new ApiError(400, 'File size must be less than 10MB');
+    if (file.size > API_CONFIG.FILE_LIMITS.MAX_SIZE_MB * 1024 * 1024) {
+      throw new ApiError(400, `File size must be less than ${API_CONFIG.FILE_LIMITS.MAX_SIZE_MB}MB`);
     }
 
     const formData = new FormData();

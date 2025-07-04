@@ -15,12 +15,15 @@ import {
   Gauge
 } from "lucide-react"
 import { EnsemblePredictionResult } from "@/types/api"
+import { processPredictionData, ProcessedPredictionData } from "@/lib/data-processor"
 
 interface AdvancedAnalyticsProps {
   result: EnsemblePredictionResult
 }
 
 export function AdvancedAnalytics({ result }: AdvancedAnalyticsProps) {
+  // Process data through master processor for CONSISTENCY
+  const processedData: ProcessedPredictionData = processPredictionData(result);
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -38,13 +41,13 @@ export function AdvancedAnalytics({ result }: AdvancedAnalyticsProps) {
       opacity: 1,
       transition: {
         duration: 0.5,
-        ease: "easeOut"
+        ease: [0.4, 0, 0.2, 1] as const
       }
     }
   }
 
   const confidencePercentage = Math.round((result.ensemble_confidence || 0) * 100)
-  const hasOilSpill = confidencePercentage > 50
+  const hasOilSpill = result.ensemble_prediction?.toLowerCase().includes("oil spill detected") || confidencePercentage > 50
 
   // Calculate accurate advanced metrics based on actual result data
   const modelAgreement = result.individual_predictions?.length > 1 ? 
@@ -84,7 +87,7 @@ export function AdvancedAnalytics({ result }: AdvancedAnalyticsProps) {
       opacity: 1,
       transition: {
         duration: 0.6,
-        ease: "easeOut"
+        ease: [0.4, 0, 0.2, 1] as const
       }
     }
   }
@@ -232,7 +235,7 @@ export function AdvancedAnalytics({ result }: AdvancedAnalyticsProps) {
                         <div className="flex items-center gap-3">
                           <motion.div 
                             className={`w-4 h-4 rounded-full ${
-                              prediction.model_name === 'UNet' ? 'bg-gradient-to-r from-blue-400 to-blue-600' : 'bg-gradient-to-r from-purple-400 to-purple-600'
+                              prediction.model_name === 'U-Net' ? 'bg-gradient-to-r from-blue-400 to-blue-600' : 'bg-gradient-to-r from-purple-400 to-purple-600'
                             }`}
                             animate={{ scale: [1, 1.2, 1] }}
                             transition={{ duration: 2, repeat: Infinity, delay: index * 0.5 }}
@@ -240,7 +243,7 @@ export function AdvancedAnalytics({ result }: AdvancedAnalyticsProps) {
                           <div>
                             <div className="font-medium">{prediction.model_name}</div>
                             <div className="text-xs text-muted-foreground">
-                              {prediction.model_name === 'UNet' ? 'Fast Segmentation' : 'High Accuracy Detection'}
+                              {prediction.model_name === 'U-Net' ? 'Fast Segmentation' : 'High Accuracy Detection'}
                             </div>
                           </div>
                         </div>
@@ -257,7 +260,7 @@ export function AdvancedAnalytics({ result }: AdvancedAnalyticsProps) {
                           animate={{ width: `${prediction.confidence * 100}%` }}
                           transition={{ duration: 1.5, delay: 0.2 * index }}
                           className={`h-full ${
-                            prediction.model_name === 'UNet' 
+                            prediction.model_name === 'U-Net' 
                               ? 'bg-gradient-to-r from-blue-400 to-blue-600' 
                               : 'bg-gradient-to-r from-purple-400 to-purple-600'
                           }`}

@@ -1,6 +1,7 @@
 {
-  "name": "oil-spill-detection-dashboard",
+  "name": "oil-spill-detection-system",
   "version": "1.0.0",
+  "description": "AI-powered oil spill detection system using deep learning models",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
@@ -26,7 +27,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
-    "framer-motion": "^12.9.2",
+    "framer-motion": "^12.23.0",
     "lucide-react": "^0.485.0",
     "next": "15.3.3",
     "next-themes": "^0.4.6",

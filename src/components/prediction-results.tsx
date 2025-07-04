@@ -5,9 +5,10 @@ import Image from "next/image"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { motion } from "framer-motion"
+import { motion, cubicBezier } from "framer-motion"
 import { Clock, Zap, Target, Activity, Users, Brain, BarChart3, TrendingUp } from "lucide-react"
 import { BarChart, Bar, PieChart, Pie, Cell, ResponsiveContainer, CartesianGrid, XAxis, YAxis, Tooltip } from "recharts"
+import { processPredictionData, ProcessedPredictionData } from "@/lib/data-processor"
 import { EnsemblePredictionResult } from "@/types/api"
 
 interface PredictionResultsProps {
@@ -32,21 +33,8 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
     )
   }
 
-  const confidencePercentage = Math.round((result.ensemble_confidence || 0) * 100)
-  const hasOilSpill = confidencePercentage > 50
-
-  // Prepare data for charts
-  const modelComparisonData = result.individual_predictions?.map((pred) => ({
-    name: pred.model_name,
-    confidence: Math.round(pred.confidence * 100),
-    time: pred.processing_time,
-    prediction: pred.prediction
-  })) || []
-
-  const confidenceDistributionData = [
-    { name: 'Oil Spill', value: confidencePercentage, color: COLORS[3] },
-    { name: 'Clean Water', value: 100 - confidencePercentage, color: COLORS[1] }
-  ]
+  // Process data through master processor for CONSISTENCY
+  const processedData: ProcessedPredictionData = processPredictionData(result);
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -65,7 +53,7 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
       opacity: 1,
       transition: {
         duration: 0.5,
-        ease: "easeOut"
+        ease: cubicBezier(0.25, 0.1, 0.25, 1)
       }
     }
   }
@@ -79,7 +67,7 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
     >
       {/* Main Results Header */}
       <motion.div variants={itemVariants}>
-        <Card className={`border-2 ${hasOilSpill ? 'border-red-200 bg-red-50/50' : 'border-green-200 bg-green-50/50'}`}>
+        <Card className={`border-2 ${processedData.finalPrediction === "Oil Spill Detected" ? 'border-red-200 bg-red-50/50' : 'border-green-200 bg-green-50/50'}`}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <motion.div
@@ -91,7 +79,7 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
               Ensemble Detection Results
             </CardTitle>
             <CardDescription>
-              Combined analysis from {result.individual_predictions?.length || 2} AI models
+              Combined analysis from {processedData.modelCount} AI models using master data processor
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -101,8 +89,8 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
                   <Activity className="w-4 h-4" />
                   <span className="text-sm font-medium">Final Detection</span>
                 </div>
-                <Badge variant={hasOilSpill ? "destructive" : "secondary"} className="text-lg px-4 py-2">
-                  {result.ensemble_prediction || "Analysis Complete"}
+                <Badge variant={processedData.finalPrediction === "Oil Spill Detected" ? "destructive" : "secondary"} className="text-lg px-4 py-2">
+                  {processedData.finalPrediction}
                 </Badge>
               </div>
               
@@ -118,9 +106,9 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
                     animate={{ scale: 1 }}
                     transition={{ duration: 0.5, delay: 0.2 }}
                   >
-                    {confidencePercentage}%
+                    {processedData.confidencePercentage}%
                   </motion.div>
-                  <Progress value={confidencePercentage} className="h-2" />
+                  <Progress value={processedData.confidencePercentage} className="h-2" />
                 </div>
               </div>
               
@@ -135,7 +123,7 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
                   animate={{ scale: 1 }}
                   transition={{ duration: 0.5, delay: 0.3 }}
                 >
-                  {result.total_processing_time?.toFixed(2)}s
+                  {processedData.totalProcessingTime.toFixed(2)}s
                 </motion.div>
               </div>
             </div>
@@ -167,7 +155,7 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
-                        data={confidenceDistributionData}
+                        data={processedData.chartsData.confidenceDistribution}
                         cx="50%"
                         cy="50%"
                         outerRadius={80}
@@ -175,7 +163,7 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
                         dataKey="value"
                         label={({ name, value }) => `${name}: ${value}%`}
                       >
-                        {confidenceDistributionData.map((entry, index) => (
+                        {processedData.chartsData.confidenceDistribution.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
                         ))}
                       </Pie>
@@ -193,7 +181,7 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
                 </h4>
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={modelComparisonData}>
+                    <BarChart data={processedData.chartsData.modelComparison}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" />
                       <YAxis />
@@ -209,7 +197,7 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
       </motion.div>
 
       {/* Individual Model Results */}
-      {result.individual_predictions && result.individual_predictions.length > 0 && (
+      {processedData.individualResults && processedData.individualResults.length > 0 && (
         <motion.div variants={itemVariants}>
           <Card>
             <CardHeader>
@@ -223,10 +211,7 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {result.individual_predictions.map((modelResult, index) => {
-                  const modelConfidence = Math.round((modelResult.confidence || 0) * 100)
-                  const modelHasOilSpill = modelConfidence > 50
-                  
+                {processedData.individualResults.map((modelResult, index) => {
                   return (
                     <motion.div 
                       key={index} 
@@ -238,9 +223,9 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
                       <div className="flex items-center justify-between">
                         <h4 className="font-medium flex items-center gap-2">
                           <Brain className="w-4 h-4" />
-                          {modelResult.model_name}
+                          {modelResult.modelName}
                         </h4>
-                        <Badge variant={modelHasOilSpill ? "destructive" : "secondary"}>
+                        <Badge variant={modelResult.prediction === "Oil Spill Detected" ? "destructive" : "secondary"}>
                           {modelResult.prediction}
                         </Badge>
                       </div>
@@ -248,14 +233,14 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
                       <div className="space-y-2">
                         <div className="flex justify-between text-sm">
                           <span>Confidence:</span>
-                          <span className="font-medium">{modelConfidence}%</span>
+                          <span className="font-medium">{modelResult.confidencePercentage}%</span>
                         </div>
-                        <Progress value={modelConfidence} className="h-1" />
+                        <Progress value={modelResult.confidencePercentage} className="h-1" />
                       </div>
                       
                       <div className="text-sm text-muted-foreground flex items-center gap-1">
                         <Clock className="w-3 h-3" />
-                        Processing time: {modelResult.processing_time?.toFixed(2)}s
+                        Processing time: {modelResult.processingTime?.toFixed(2)}s
                       </div>
                     </motion.div>
                   )
@@ -368,7 +353,7 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
                         <div className="w-40 h-40 relative">
                           <motion.div
                             className={`absolute inset-0 rounded-xl blur-lg ${
-                              modelResult.model_name === 'UNet' 
+                              modelResult.model_name === 'U-Net' 
                                 ? 'bg-gradient-to-r from-green-500/20 to-emerald-500/20' 
                                 : 'bg-gradient-to-r from-purple-500/20 to-pink-500/20'
                             }`}
@@ -379,7 +364,7 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
                             transition={{ duration: 2, repeat: Infinity, delay: 0.5 * index }}
                           />
                           <div className={`relative bg-white dark:bg-gray-900 rounded-xl overflow-hidden border-2 ${
-                            modelResult.model_name === 'UNet' 
+                            modelResult.model_name === 'U-Net' 
                               ? 'border-green-200 dark:border-green-800' 
                               : 'border-purple-200 dark:border-purple-800'
                           }`}>
@@ -400,7 +385,7 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
                             transition={{ duration: 0.5, delay: 0.5 * (index + 1) }}
                           >
                             <Badge className={`${
-                              modelResult.model_name === 'UNet' 
+                              modelResult.model_name === 'U-Net' 
                                 ? 'bg-green-500 hover:bg-green-600' 
                                 : 'bg-purple-500 hover:bg-purple-600'
                             } text-white`}>
@@ -413,7 +398,7 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
                           <div className="flex items-center gap-2 mb-2">
                             <motion.div
                               className={`w-3 h-3 rounded-full ${
-                                modelResult.model_name === 'UNet' 
+                                modelResult.model_name === 'U-Net' 
                                   ? 'bg-gradient-to-r from-green-400 to-emerald-500' 
                                   : 'bg-gradient-to-r from-purple-400 to-pink-500'
                               }`}
@@ -423,7 +408,7 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
                             <h4 className="font-semibold text-lg">{modelResult.model_name}</h4>
                           </div>
                           <p className="text-sm text-muted-foreground mb-2">
-                            {modelResult.model_name === 'UNet' 
+                            {modelResult.model_name === 'U-Net' 
                               ? 'Fast semantic segmentation with U-Net architecture' 
                               : 'High-accuracy detection with DeepLab V3+ model'}
                           </p>
@@ -513,11 +498,11 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
                         <div className="flex items-center gap-4 text-sm">
                           <div className="flex items-center gap-1">
                             <Activity className="w-4 h-4 text-green-500" />
-                            <span>Ensemble: {confidencePercentage}%</span>
+                            <span>Ensemble: {processedData.confidencePercentage}%</span>
                           </div>
                           <div className="flex items-center gap-1">
                             <Clock className="w-4 h-4 text-gray-500" />
-                            <span>Total: {result.total_processing_time?.toFixed(2)}s</span>
+                            <span>Total: {processedData.totalProcessingTime?.toFixed(2)}s</span>
                           </div>
                         </div>
                       </div>
