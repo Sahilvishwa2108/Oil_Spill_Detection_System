@@ -46,13 +46,40 @@ except ImportError as e:
 # Configure environment for optimal performance
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # Suppress TensorFlow logs
 
-# Model download configuration
+# Model download configuration - Updated with new .keras models
+HUGGINGFACE_REPO_UNET = os.getenv(
+    "HUGGINGFACE_REPO_UNET", 
+    "sahilvishwa2108/oil-spill-unet"
+)
+HUGGINGFACE_REPO_DEEPLAB = os.getenv(
+    "HUGGINGFACE_REPO_DEEPLAB", 
+    "sahilvishwa2108/oil-spill-deeplab"
+)
 HUGGINGFACE_REPO = os.getenv(
     "HUGGINGFACE_REPO", "sahilvishwa2108/oil-spill-detection-models"
 )
+# Only .keras format for optimized production performance
 MODEL_FILES = {
-    "unet_final_model.h5": "unet_final_model.h5",
-    "deeplab_final_model.h5": "deeplab_final_model.h5",
+    "unet_final_model.keras": "unet_final_model.keras",
+    "deeplab_final_model.keras": "deeplab_final_model.keras",
+}
+
+# Model performance metrics for dashboard
+MODEL_PERFORMANCE = {
+    "unet_final_model.keras": {
+        "name": "UNet",
+        "f1_score": 0.9356,
+        "architecture": "U-Net",
+        "size_mb": 22.39,
+        "description": "Lightweight segmentation model optimized for speed"
+    },
+    "deeplab_final_model.keras": {
+        "name": "DeepLabV3+",
+        "f1_score": 0.9668,
+        "architecture": "DeepLabV3+",
+        "size_mb": 204.56,
+        "description": "High-accuracy segmentation model with advanced features"
+    }
 }
 
 
@@ -68,17 +95,36 @@ def download_model_if_needed(filename: str) -> bool:
         return True
 
     try:
-        url = f"https://huggingface.co/{HUGGINGFACE_REPO}/resolve/main/{filename}"
-        print(f"⬇️ Downloading {filename} from HuggingFace...")
+        # Determine which repo to use based on model type
+        if "unet" in filename.lower():
+            repo = HUGGINGFACE_REPO_UNET
+            model_file = "model.keras"
+        elif "deeplab" in filename.lower():
+            repo = HUGGINGFACE_REPO_DEEPLAB
+            model_file = "model.keras"
+        else:
+            repo = HUGGINGFACE_REPO
+            model_file = filename
+
+        url = f"https://huggingface.co/{repo}/resolve/main/{model_file}"
+        print(f"⬇️ Downloading {filename} from {repo}...")
 
         response = requests.get(url, stream=True)
         response.raise_for_status()
 
+        total_size = int(response.headers.get('content-length', 0))
+        downloaded = 0
+
         with open(model_path, "wb") as f:
             for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
+                if chunk:
+                    f.write(chunk)
+                    downloaded += len(chunk)
+                    if total_size > 0:
+                        progress = (downloaded / total_size) * 100
+                        print(f"\r📊 Progress: {progress:.1f}%", end="")
 
-        print(f"✅ Successfully downloaded {filename}")
+        print(f"\n✅ Successfully downloaded {filename}")
         return True
     except Exception as e:
         print(f"❌ Failed to download {filename}: {e}")
@@ -162,7 +208,7 @@ class HealthResponse(BaseModel):
 
 
 def lazy_load_model1():
-    """Load model1 only when needed"""
+    """Load model1 only when needed - .keras format only"""
     global model1
     if model1 is None:
         try:
@@ -170,112 +216,32 @@ def lazy_load_model1():
                 print("❌ TensorFlow not available for model loading")
                 return None
 
-            model_path = "models/unet_final_model.h5"
-            print(f"🔄 Attempting to load model1 from {model_path}")
+            model_path = "models/unet_final_model.keras"
+            print(f"🔄 Loading UNet model from {model_path}")
 
             if os.path.exists(model_path):
-                print(f"✅ Model file exists at {model_path}")                # Try different loading approaches for compatibility
-                try:
-                    # First try: Load without compilation for compatibility
-                    model1 = tf.keras.models.load_model(model_path, compile=False)
-                    print("✅ Model 1 (U-Net) loaded successfully into memory")
-                except Exception as e1:
-                    print(f"⚠️ Standard loading failed: {str(e1)[:100]}...")
-                    try:
-                        # Second try: Use tf.keras.utils.custom_object_scope
-                        with tf.keras.utils.custom_object_scope(
-                            {"batch_shape": lambda **kwargs: None}
-                        ):
-                            model1 = tf.keras.models.load_model(
-                                model_path, compile=False
-                            )
-                            print("✅ Model 1 (U-Net) loaded with custom object scope")
-                    except Exception as e2:
-                        print(f"⚠️ Custom object scope failed: {str(e2)[:100]}...")
-                        try:
-                            # Third try: Legacy format loading
-                            if h5py is None:
-                                raise Exception("h5py not available")
-
-                            with h5py.File(model_path, "r") as f:
-                                if "model_config" in f.attrs:
-                                    print(
-                                        "🔄 Detected legacy model format, attempting conversion..."
-                                    )
-                                    # Try to load with legacy support
-                                    if model_from_json is None:
-                                        raise Exception("model_from_json not available")
-
-                                    config = f.attrs["model_config"]
-                                    if isinstance(config, bytes):
-                                        config = config.decode("utf-8")
-
-                                    # Fix the config by removing batch_shape references
-                                    import json
-
-                                    config_dict = json.loads(config)
-
-                                    # Recursively remove batch_shape from config
-                                    def remove_batch_shape(obj):
-                                        if isinstance(obj, dict):
-                                            if "batch_shape" in obj:
-                                                if (
-                                                    "input_shape" not in obj
-                                                    and obj["batch_shape"]
-                                                ):
-                                                    # Convert batch_shape to input_shape
-                                                    batch_shape = obj["batch_shape"]
-                                                    if (
-                                                        batch_shape
-                                                        and len(batch_shape) > 1
-                                                    ):
-                                                        obj["input_shape"] = (
-                                                            batch_shape[1:]
-                                                        )  # Remove batch dimension
-                                                del obj["batch_shape"]
-                                            for key, value in obj.items():
-                                                remove_batch_shape(value)
-                                        elif isinstance(obj, list):
-                                            for item in obj:
-                                                remove_batch_shape(item)
-
-                                    remove_batch_shape(config_dict)
-                                    fixed_config = json.dumps(config_dict)
-
-                                    # Create model from fixed config
-                                    model1 = model_from_json(fixed_config)
-                                    model1.load_weights(model_path)
-                                    print(
-                                        "✅ Model 1 (U-Net) loaded with legacy compatibility fix"
-                                    )
-                                else:
-                                    raise Exception("Cannot determine model format")
-                        except Exception as e3:
-                            print(
-                                f"❌ All loading methods failed. Error: {str(e3)[:100]}..."
-                            )
-                            print(
-                                "🔄 Model may need to be retrained with current TensorFlow version"
-                            )
-                            return None
+                print(f"✅ Model file exists at {model_path}")
+                model1 = tf.keras.models.load_model(model_path, compile=False)
+                print("✅ Model 1 (U-Net) loaded successfully into memory")
             else:
                 print(f"❌ Model 1 not found at {model_path}")
                 models_dir = Path("models")
                 if models_dir.exists():
-                    files = list(models_dir.glob("*"))
-                    print(f"📁 Files in models directory: {files}")
+                    files = list(models_dir.glob("*.keras"))
+                    print(f"📁 Available .keras files: {files}")
                 else:
                     print("📁 Models directory does not exist")
+                return None
         except Exception as e:
             print(f"❌ Error loading model 1: {e}")
             import traceback
-
             traceback.print_exc()
+            return None
     return model1
 
 
 def lazy_load_model2():
-    """Load model2 only when needed"""
+    """Load model2 only when needed - .keras format only"""
     global model2
     if model2 is None:
         try:
@@ -283,49 +249,27 @@ def lazy_load_model2():
                 print("❌ TensorFlow not available for model loading")
                 return None
 
-            model_path = "models/deeplab_final_model.h5"
-            print(f"🔄 Attempting to load model2 from {model_path}")
+            model_path = "models/deeplab_final_model.keras"
+            print(f"🔄 Loading DeepLab model from {model_path}")
 
             if os.path.exists(model_path):
                 print(f"✅ Model file exists at {model_path}")
-
-                # Try different loading approaches for compatibility
-                try:
-                    # First try: Load without compilation for compatibility
-                    model2 = tf.keras.models.load_model(model_path, compile=False)
-                    print("✅ Model 2 (DeepLab) loaded successfully into memory")
-                except Exception as e1:
-                    print(f"⚠️ Standard loading failed: {str(e1)[:100]}...")
-                    try:
-                        # Second try: Use tf.keras.utils.custom_object_scope
-                        with tf.keras.utils.custom_object_scope(
-                            {"batch_shape": lambda **kwargs: None}
-                        ):
-                            model2 = tf.keras.models.load_model(
-                                model_path, compile=False
-                            )
-                            print(
-                                "✅ Model 2 (DeepLab) loaded with custom object scope"
-                            )
-                    except Exception as e2:
-                        print(f"⚠️ Custom object scope failed: {str(e2)[:100]}...")
-                        print(
-                            "🔄 Model may need to be retrained with current TensorFlow version"
-                        )
-                        return None
+                model2 = tf.keras.models.load_model(model_path, compile=False)
+                print("✅ Model 2 (DeepLab) loaded successfully into memory")
             else:
                 print(f"❌ Model 2 not found at {model_path}")
                 models_dir = Path("models")
                 if models_dir.exists():
-                    files = list(models_dir.glob("*"))
-                    print(f"📁 Files in models directory: {files}")
+                    files = list(models_dir.glob("*.keras"))
+                    print(f"📁 Available .keras files: {files}")
                 else:
                     print("📁 Models directory does not exist")
+                return None
         except Exception as e:
             print(f"❌ Error loading model 2: {e}")
             import traceback
-
             traceback.print_exc()
+            return None
     return model2
 
 
@@ -788,8 +732,8 @@ def ensemble_predict(image_array):
 async def health_check():
     """Health check endpoint"""
     # Check if model files exist (they may not be loaded in memory yet due to lazy loading)
-    model1_exists = os.path.exists("models/unet_final_model.h5")
-    model2_exists = os.path.exists("models/deeplab_final_model.h5")
+    model1_exists = os.path.exists("models/unet_final_model.keras")
+    model2_exists = os.path.exists("models/deeplab_final_model.keras")
 
     return HealthResponse(
         status="healthy",
@@ -802,22 +746,26 @@ async def health_check():
 async def get_models_info():
     """Get information about available models"""
     # Check if model files exist
-    model1_exists = os.path.exists("models/unet_final_model.h5")
-    model2_exists = os.path.exists("models/deeplab_final_model.h5")
+    model1_exists = os.path.exists("models/unet_final_model.keras")
+    model2_exists = os.path.exists("models/deeplab_final_model.keras")
+
+    models_info = {}
+    for model_file, performance in MODEL_PERFORMANCE.items():
+        model_exists = os.path.exists(f"models/{model_file}")
+        models_info[model_file] = {
+            "name": performance["name"],
+            "architecture": performance["architecture"],
+            "f1_score": performance["f1_score"],
+            "size_mb": performance["size_mb"],
+            "description": performance["description"],
+            "loaded": model_exists,
+            "status": "ready" if model_exists else "downloading"
+        }
 
     return {
-        "models": {
-            "model1": {
-                "name": "U-Net",
-                "description": "U-Net model for semantic segmentation",
-                "loaded": model1_exists,
-            },
-            "model2": {
-                "name": "DeepLab V3+",
-                "description": "DeepLab V3+ model for semantic segmentation",
-                "loaded": model2_exists,
-            },
-        }
+        "models": models_info,
+        "ensemble_advantage": "Combining both models provides better accuracy and robustness",
+        "total_models": len(models_info)
     }
 
 

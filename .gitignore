@@ -49,6 +49,36 @@ PROJECT_*.md
 railway.toml
 Procfile
 
+# Backend specific
+backend/__pycache__/
+backend/*.pyc
+backend/models/*.h5
+backend/logs/
+backend/notebooks/logs/
+backend/notebooks/temp_fix.py
+backend/test_models.py
+*.log
+
+# Model files (except .keras)
+*.h5
+*.pkl
+*.joblib
+
+# Python virtual environment
+venv/
+env/
+.python-version
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store
+
 # Data and models
 backend/datasets/
 backend/notebooks/

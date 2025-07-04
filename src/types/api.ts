@@ -30,13 +30,16 @@ export interface ModelInfo {
   name: string;
   description: string;
   loaded: boolean;
+  architecture?: string;
+  f1_score?: number;
+  size_mb?: number;
+  status?: string;
 }
 
 export interface ModelsResponse {
-  models: {
-    model1: ModelInfo;
-    model2: ModelInfo;
-  };
+  models: Record<string, ModelInfo>;
+  ensemble_advantage?: string;
+  total_models?: number;
 }
 
 export interface HealthStatus {

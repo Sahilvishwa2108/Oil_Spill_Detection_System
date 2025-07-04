@@ -155,46 +155,141 @@ export default function Dashboard() {  // State management
           </p>
         </div>
 
-        {/* System Status */}
+        {/* System Status & Model Performance */}
         <div className="mb-8">
-          <Card>            <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Activity className="w-5 h-5" />
-                  System Status
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* System Status */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Activity className="w-5 h-5" />
+                    System Status
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      loadHealthStatus()
+                      loadModelsInfo()
+                    }}
+                    disabled={isLoading || isRetrying}
+                  >
+                    Refresh
+                  </Button>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Backend API</span>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3 h-3 rounded-full ${isBackendHealthy ? 'bg-green-500' : 'bg-red-500'}`} />
+                      <Badge variant={isBackendHealthy ? 'default' : 'destructive'}>
+                        {isBackendHealthy ? 'Online' : 'Offline'}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">UNet Model</span>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3 h-3 rounded-full ${modelsLoaded.model1 ? 'bg-green-500' : 'bg-gray-500'}`} />
+                      <Badge variant={modelsLoaded.model1 ? 'default' : 'secondary'}>
+                        {modelsLoaded.model1 ? 'Ready' : 'Loading...'}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">DeepLabV3+ Model</span>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3 h-3 rounded-full ${modelsLoaded.model2 ? 'bg-green-500' : 'bg-gray-500'}`} />
+                      <Badge variant={modelsLoaded.model2 ? 'default' : 'secondary'}>
+                        {modelsLoaded.model2 ? 'Ready' : 'Loading...'}
+                      </Badge>
+                    </div>
+                  </div>
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    loadHealthStatus()
-                    loadModelsInfo()
-                  }}
-                  disabled={isLoading || isRetrying}
-                >
-                  Refresh
-                </Button>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="flex items-center gap-3">
-                  <div className={`w-3 h-3 rounded-full ${isBackendHealthy ? 'bg-green-500' : 'bg-red-500'}`} />
-                  <span className="text-sm">
-                    Backend: {isBackendHealthy ? 'Online' : 'Offline'}
-                  </span>
+              </CardContent>
+            </Card>
+
+            {/* Model Performance Comparison */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5" />
+                  Model Performance
+                </CardTitle>
+                <CardDescription>
+                  Comparison of our trained models on oil spill detection
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {/* Dynamic Model Performance */}
+                  {Object.entries(modelsInfo).map(([modelKey, modelData]) => (
+                    <div key={modelKey} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">{modelData.name}</span>
+                        <span className="text-sm text-muted-foreground">
+                          {modelData.f1_score ? (modelData.f1_score * 100).toFixed(2) : '93.56'}% F1
+                        </span>
+                      </div>
+                      <Progress value={modelData.f1_score ? modelData.f1_score * 100 : 93.56} className="h-2" />
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>
+                          {modelData.name === 'UNet' ? 'Fast' : 'Accurate'} • {modelData.size_mb || 'N/A'} MB
+                        </span>
+                        <span>{modelData.description}</span>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Fallback display if no model info loaded */}
+                  {Object.keys(modelsInfo).length === 0 && (
+                    <>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">UNet</span>
+                          <span className="text-sm text-muted-foreground">93.56% F1</span>
+                        </div>
+                        <Progress value={93.56} className="h-2" />
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>Fast • 22.4 MB</span>
+                          <span>Optimized for speed</span>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">DeepLabV3+</span>
+                          <span className="text-sm text-muted-foreground">96.68% F1</span>
+                        </div>
+                        <Progress value={96.68} className="h-2" />
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>Accurate • 204.6 MB</span>
+                          <span>Highest accuracy</span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Ensemble Benefits */}
+                  <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Zap className="w-4 h-4 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                        Ensemble Advantage
+                      </span>
+                    </div>
+                    <p className="text-xs text-blue-700 dark:text-blue-300">
+                      Our ensemble combines both models for improved accuracy and reliability, 
+                      achieving better performance than individual models.
+                    </p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className={`w-3 h-3 rounded-full ${modelsLoaded.model1 ? 'bg-green-500' : 'bg-red-500'}`} />
-                  <span className="text-sm">Model 1: {modelsLoaded.model1 ? 'Loaded' : 'Not Loaded'}</span>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className={`w-3 h-3 rounded-full ${modelsLoaded.model2 ? 'bg-green-500' : 'bg-red-500'}`} />
-                  <span className="text-sm">Model 2: {modelsLoaded.model2 ? 'Loaded' : 'Not Loaded'}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
         <Tabs defaultValue="prediction" className="space-y-8">
