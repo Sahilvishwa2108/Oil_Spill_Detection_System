@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Image from "next/image"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -237,10 +238,15 @@ export function TestImageGallery({
                   {viewMode === 'grid' ? (
                     <>
                       <div className="aspect-square relative overflow-hidden">
-                        <img
+                        <Image
                           src={image.url}
                           alt={image.name}
-                          className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                          fill
+                          className="object-cover transition-transform duration-300 hover:scale-105"
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                          loading="lazy"
+                          placeholder="blur"
+                          blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAv/xAAhEAACAQMDBQAAAAAAAAAAAAABAgMABAUGIWGRkqGx0f/EABUBAQEAAAAAAAAAAAAAAAAAAAMF/8QAGhEAAgIDAAAAAAAAAAAAAAAAAAECEgMRkf/aAAwDAQACEQMRAD8AltJagyeH0AthI5xdrLcNM91BF5pX2HaH9bcfaSXWGaRmknyJckliyjqTzSlT54b6bk+h0R//2Q=="
                         />
                         <div className="absolute top-2 left-2">
                           <Badge className={DIFFICULTY_COLORS[image.difficulty as keyof typeof DIFFICULTY_COLORS]}>
@@ -271,11 +277,15 @@ export function TestImageGallery({
                   ) : (
                     <CardContent className="p-4">
                       <div className="flex items-center gap-4">
-                        <img
-                          src={image.url}
-                          alt={image.name}
-                          className="w-16 h-16 object-cover rounded-lg"
-                        />
+                        <div className="relative w-16 h-16 rounded-lg overflow-hidden">
+                          <Image
+                            src={image.url}
+                            alt={image.name}
+                            fill
+                            className="object-cover"
+                            sizes="64px"
+                          />
+                        </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
                             <span className="font-medium">{image.name}</span>

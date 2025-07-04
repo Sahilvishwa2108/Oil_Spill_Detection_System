@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import Image from "next/image"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
@@ -304,24 +305,38 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
                     transition={{ duration: 0.8 }}
                     className="relative mb-8"
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="w-40 h-40 relative">
-                        <motion.div
-                          className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 rounded-xl blur-lg"
-                          animate={{
-                            scale: [1, 1.1, 1],
-                            opacity: [0.3, 0.6, 0.3]
-                          }}
-                          transition={{ duration: 2, repeat: Infinity }}
-                        />
-                        <div className="relative bg-white dark:bg-gray-900 rounded-xl overflow-hidden border-2 border-cyan-200 dark:border-cyan-800">
-                          <img
-                            src={originalImage}
-                            alt="Original"
-                            className="w-full h-full object-cover"
+                    <div className="flex items-center gap-4">                        <div className="w-40 h-40 relative">
+                          <motion.div
+                            className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 rounded-xl blur-lg"
+                            animate={{
+                              scale: [1, 1.1, 1],
+                              opacity: [0.3, 0.6, 0.3]
+                            }}
+                            transition={{ duration: 2, repeat: Infinity }}
                           />
+                          <div className="relative bg-white dark:bg-gray-900 rounded-xl overflow-hidden border-2 border-cyan-200 dark:border-cyan-800">
+                            <Image
+                              src={originalImage}
+                              alt="Original satellite/aerial imagery"
+                              fill
+                              className="object-cover"
+                              sizes="(max-width: 768px) 100vw, 50vw"
+                              priority
+                            />
+                            {/* Image Classification Label */}
+                            <div className="absolute top-2 left-2 right-2">
+                              <Badge className="bg-cyan-500 text-white text-xs font-medium">
+                                📡 INPUT IMAGE
+                              </Badge>
+                            </div>
+                            <div className="absolute bottom-2 left-2 right-2">
+                              <div className="bg-black/70 backdrop-blur-sm rounded px-2 py-1">
+                                <div className="text-white text-xs font-medium">Original Data</div>
+                                <div className="text-white/80 text-xs">Satellite/Aerial Imagery</div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
                           <motion.div
@@ -368,10 +383,12 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
                               ? 'border-green-200 dark:border-green-800' 
                               : 'border-purple-200 dark:border-purple-800'
                           }`}>
-                            <img
+                            <Image
                               src={`data:image/png;base64,${modelResult.prediction_mask}`}
                               alt={`${modelResult.model_name} prediction`}
-                              className="w-full h-full object-cover"
+                              fill
+                              className="object-cover"
+                              sizes="(max-width: 768px) 100vw, 50vw"
                             />
                           </div>
                           
@@ -446,10 +463,12 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
                           transition={{ duration: 3, repeat: Infinity }}
                         />
                         <div className="relative bg-white dark:bg-gray-900 rounded-xl overflow-hidden border-2 border-yellow-200 dark:border-yellow-800">
-                          <img
+                          <Image
                             src={`data:image/png;base64,${result.ensemble_mask}`}
                             alt="Ensemble prediction"
-                            className="w-full h-full object-cover"
+                            fill
+                            className="object-cover"
+                            sizes="(max-width: 768px) 100vw, 50vw"
                           />
                         </div>
                         
