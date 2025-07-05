@@ -1,50 +1,30 @@
 "use client"
 
 import * as React from "react"
-import { motion, AnimatePresence, easeInOut } from "framer-motion"
+import { motion, easeInOut } from "framer-motion"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
 import { 
   Brain, 
   Activity, 
-  Target, 
-  Zap, 
-  TrendingUp,
   Gauge,
-  BarChart3,
-  PieChart,
-  LineChart,
+  Layers,
+  Binary,
+  Satellite,
   Radar,
-  Cpu,
-  Clock,
-  Shield,
   AlertTriangle,
   CheckCircle,
-  Layers,
+  Zap,
+  Shield,
   Eye,
-  Sparkles,
-  Binary,
-  Satellite
+  Target
 } from "lucide-react"
 import { 
   ResponsiveContainer,
   RadialBarChart,
   RadialBar,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ComposedChart,
-  Bar,
-  Line,
-  ScatterChart,
-  Scatter,
-  Cell
+  Tooltip
 } from "recharts"
 import { EnsemblePredictionResult } from "@/types/api"
 import { processPredictionData, ProcessedPredictionData } from "@/lib/data-processor"
@@ -269,7 +249,7 @@ export function AdvancedAnalytics({ result }: AdvancedAnalyticsProps) {
                         fill="url(#performanceGradient)"
                       />
                       <Tooltip 
-                        formatter={(value: any) => [`${value}%`, 'Performance']}
+                        formatter={(value: number) => [`${value}%`, 'Performance']}
                         contentStyle={{
                           backgroundColor: 'rgba(255, 255, 255, 0.95)',
                           border: '1px solid #e2e8f0',

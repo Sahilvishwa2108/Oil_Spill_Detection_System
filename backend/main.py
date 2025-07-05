@@ -258,6 +258,8 @@ class ModelPrediction(BaseModel):
 
 
 class EnsemblePredictionResponse(BaseModel):
+    model_config = {"protected_namespaces": ()}
+
     success: bool
     individual_predictions: List[ModelPrediction] = []
     ensemble_prediction: Optional[str] = None
@@ -557,7 +559,7 @@ def mask_to_base64(mask, color_map=None, is_confidence_map=False):
         pil_image.save(buffered, format="PNG")
         img_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
         
-        return f"data:image/png;base64,{img_base64}"
+        return img_base64  # Return just the base64 string, not the data URL
         
     except Exception as e:
         print(f"Error converting mask to base64: {e}")
@@ -983,27 +985,40 @@ def ensemble_predict_comprehensive(image_array):
 @app.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint"""
-    # Check if model files exist (they may not be loaded in memory yet due to lazy loading)
-    model1_exists = os.path.exists("models/unet_final_model.keras")
-    model2_exists = os.path.exists("models/deeplab_final_model.keras")
+    # Check if model files exist and are accessible
+    model1_available = os.path.exists("models/unet_final_model.keras")
+    model2_available = os.path.exists("models/deeplab_final_model.keras")
+    
+    # Also check if they're loaded in memory
+    global model1, model2
+    model1_loaded = model1 is not None
+    model2_loaded = model2 is not None
+    
+    # Consider models "ready" if files exist, even if not loaded in memory
+    # This gives better UX as models are loaded on-demand
+    status = "healthy" if (model1_available and model2_available) else "unhealthy"
 
     return HealthResponse(
-        status="healthy",
+        status=status,
         timestamp=datetime.now().isoformat(),
-        models_loaded={"model1": model1_exists, "model2": model2_exists},
+        models_loaded={"model1": model1_loaded or model1_available, "model2": model2_loaded or model2_available},
     )
 
 
 @app.get("/models/info")
 async def get_models_info():
     """Get information about available models"""
-    # Check if model files exist
-    model1_exists = os.path.exists("models/unet_final_model.keras")
-    model2_exists = os.path.exists("models/deeplab_final_model.keras")
+    # Check if models are actually loaded in memory
+    global model1, model2
+    model1_loaded = model1 is not None
+    model2_loaded = model2 is not None
 
     models_info = {}
     for model_file, performance in MODEL_PERFORMANCE.items():
         model_exists = os.path.exists(f"models/{model_file}")
+        # Correct mapping: unet_final_model.keras -> model1, deeplab_final_model.keras -> model2
+        is_loaded = (model1_loaded if "unet_final_model.keras" == model_file else model2_loaded)
+        
         models_info[model_file] = {
             "name": performance["name"],
             "architecture": performance["architecture"],
@@ -1013,8 +1028,9 @@ async def get_models_info():
             "description": performance["description"],
             "training_epochs": performance.get("training_epochs", 50),
             "parameters": performance.get("parameters", "N/A"),
-            "loaded": model_exists,
-            "status": "ready" if model_exists else "downloading"
+            "loaded": is_loaded,
+            "file_exists": model_exists,
+            "status": "loaded" if is_loaded else ("ready" if model_exists else "missing")
         }
 
     return {
@@ -1152,7 +1168,7 @@ async def predict_detailed(file: UploadFile = File(...)):
 
     try:
         # Validate file type
-        if not file.content_type.startswith("image/"):
+        if not file.content_type or not file.content_type.startswith("image/"):
             raise HTTPException(status_code=400, detail="File must be an image")
 
         # Read and process image
@@ -1210,6 +1226,44 @@ async def root():
             "docs": "/docs",
         },
     }
+
+
+@app.get("/debug/test-image")
+async def test_image_endpoint():
+    """Debug endpoint to test image generation"""
+    try:
+        import numpy as np
+        from PIL import Image
+        import io
+        import base64
+        
+        # Create a simple test image (red square)
+        test_array = np.zeros((256, 256, 3), dtype=np.uint8)
+        test_array[50:200, 50:200] = [255, 0, 0]  # Red square
+        
+        # Convert to PIL Image
+        test_image = Image.fromarray(test_array, 'RGB')
+        
+        # Convert to base64
+        buffer = io.BytesIO()
+        test_image.save(buffer, format='PNG')
+        buffer.seek(0)
+        base64_str = base64.b64encode(buffer.getvalue()).decode('utf-8')
+        
+        return {
+            "success": True,
+            "test_image": base64_str,
+            "image_info": {
+                "size": test_image.size,
+                "mode": test_image.mode,
+                "base64_length": len(base64_str)
+            }
+        }
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 import { API_CONFIG } from "@/constants";
-import { PredictionResult, EnsemblePredictionResult, ModelsResponse, HealthStatus, BatchPredictionResponse } from "@/types/api";
+import { PredictionResult, EnsemblePredictionResult, ModelsResponse, HealthStatus } from "@/types/api";
 
 // API Configuration
 export const API_BASE_URL = API_CONFIG.BASE_URL;

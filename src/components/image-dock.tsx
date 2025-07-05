@@ -203,12 +203,17 @@ export function ImageDock({ onImageSelect, onPredictionTabActivate }: ImageDockP
                               ? 'border-cyan-400 dark:border-cyan-600' 
                               : 'border-transparent group-hover:border-blue-300 dark:group-hover:border-blue-700'
                           }`}
-                          whileHover={{ scale: 1.05, y: -5 }}
-                          whileTap={{ scale: 0.95 }}
+                          whileHover={{ 
+                            scale: 1.05, 
+                            y: -5,
+                            transition: { duration: 0.2 }
+                          }}
+                          whileTap={{ 
+                            scale: 0.95,
+                            transition: { duration: 0.1 }
+                          }}
                           animate={isActive ? { scale: [1, 1.1, 1] } : {}}
                           transition={{ 
-                            hover: { duration: 0.2 },
-                            tap: { duration: 0.1 },
                             scale: { duration: 1, repeat: isActive ? Infinity : 0 }
                           }}
                         >

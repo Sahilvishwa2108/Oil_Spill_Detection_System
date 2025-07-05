@@ -527,15 +527,16 @@ export default function Dashboard() {
               </Alert>
             )}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 min-h-[500px]">
               {/* Input Section */}
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5 }}
+                className="min-h-full"
               >
-                <Card>
-                  <CardHeader>
+                <Card className="h-full flex flex-col min-h-[500px]">
+                  <CardHeader className="flex-shrink-0">
                     <CardTitle className="flex items-center gap-2">
                       <Upload className="w-5 h-5" />
                       Upload Image
@@ -544,27 +545,29 @@ export default function Dashboard() {
                       Upload satellite or aerial imagery for oil spill detection
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-6">
-                    <FileUpload
-                      onFilesChange={setFiles}
-                      disabled={isLoading || isRetrying}
-                      onError={handleFileUploadError}
-                      maxSize={5} // 5MB limit
-                    />
+                  <CardContent className="flex-1 flex flex-col justify-between space-y-6 min-h-0">
+                    <div className="space-y-6">
+                      <FileUpload
+                        onFilesChange={setFiles}
+                        disabled={isLoading || isRetrying}
+                        onError={handleFileUploadError}
+                        maxSize={5} // 5MB limit
+                      />
 
-                    <motion.div 
-                      className="text-sm text-muted-foreground bg-blue-50 dark:bg-blue-950 p-3 rounded-lg"
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.3, delay: 0.1 }}
-                    >
-                      <p className="font-medium text-blue-900 dark:text-blue-100 mb-1">Ensemble Prediction</p>
-                      <p className="text-blue-700 dark:text-blue-300">
-                        Both U-Net and DeepLab V3+ models will analyze your image simultaneously for the most accurate results.
-                      </p>
-                    </motion.div>
+                      <motion.div 
+                        className="text-sm text-muted-foreground bg-blue-50 dark:bg-blue-950 p-3 rounded-lg"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.3, delay: 0.1 }}
+                      >
+                        <p className="font-medium text-blue-900 dark:text-blue-100 mb-1">Ensemble Prediction</p>
+                        <p className="text-blue-700 dark:text-blue-300">
+                          Both U-Net and DeepLab V3+ models will analyze your image simultaneously for the most accurate results.
+                        </p>
+                      </motion.div>
+                    </div>
 
-                    <div className="flex gap-3">
+                    <div className="flex gap-3 mt-auto">
                       <motion.div
                         className="flex-1"
                         whileHover={{ scale: 1.02 }}
@@ -614,15 +617,16 @@ export default function Dashboard() {
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.5, delay: 0.1 }}
+                className="min-h-full"
               >
-                <Card>
-                  <CardHeader>
+                <Card className="h-full flex flex-col min-h-[500px]">
+                  <CardHeader className="flex-shrink-0">
                     <CardTitle className="flex items-center gap-2">
                       <Info className="w-5 h-5" />
                       Quick Stats
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="flex-1 flex flex-col justify-between min-h-0">
                     <div className="space-y-4">
                       <div className="grid grid-cols-2 gap-4">
                         <motion.div 
@@ -658,7 +662,7 @@ export default function Dashboard() {
                       </div>
                       
                       <motion.div 
-                        className="text-center p-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950 rounded-lg"
+                        className="text-center p-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950 rounded-lg mt-auto"
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: 0.5 }}

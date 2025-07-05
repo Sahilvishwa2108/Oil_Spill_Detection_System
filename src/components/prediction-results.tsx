@@ -5,10 +5,9 @@ import Image from "next/image"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { motion, AnimatePresence, cubicBezier } from "framer-motion"
+import { motion } from "framer-motion"
 import { 
   Clock, 
-  Zap, 
   Target, 
   Activity, 
   Users, 
@@ -38,13 +37,7 @@ import {
   XAxis, 
   YAxis, 
   Tooltip,
-  LineChart,
-  Line,
-  RadialBarChart,
-  RadialBar,
-  Legend,
-  Area,
-  AreaChart
+  Legend
 } from "recharts"
 import { processPredictionData, ProcessedPredictionData } from "@/lib/data-processor"
 import { EnsemblePredictionResult } from "@/types/api"
@@ -54,13 +47,13 @@ interface PredictionResultsProps {
   originalImage?: string
 }
 
-// Advanced color schemes for different visualization types
-const CHART_COLORS = {
-  primary: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
-  gradient: ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe'],
-  ocean: ['#006994', '#1b9aaa', '#06ffa5', '#ffaa00', '#ff006e'],
-  neural: ['#ff006e', '#8338ec', '#3a86ff', '#06ffa5', '#ffbe0b']
-}
+// Advanced color schemes for different visualization types (for future use)
+// const CHART_COLORS = {
+//   primary: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
+//   gradient: ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe'],
+//   ocean: ['#006994', '#1b9aaa', '#06ffa5', '#ffaa00', '#ff006e'],
+//   neural: ['#ff006e', '#8338ec', '#3a86ff', '#06ffa5', '#ffbe0b']
+// }
 
 // Class information matching the notebook exactly
 const CLASS_INFO = [
@@ -72,6 +65,21 @@ const CLASS_INFO = [
 ]
 
 export function PredictionResults({ result, originalImage }: PredictionResultsProps) {
+  // Debug logging to check what data we're receiving
+  console.log('PredictionResults received result:', result);
+  console.log('Original image:', originalImage);
+  
+  if (result && result.prediction_images) {
+    console.log('Prediction images keys:', Object.keys(result.prediction_images));
+    Object.entries(result.prediction_images).forEach(([key, value]) => {
+      if (value) {
+        console.log(`${key} base64 length:`, value.length);
+        console.log(`${key} first 50 chars:`, value.substring(0, 50));
+      } else {
+        console.log(`${key}: empty/null`);
+      }
+    });
+  }
   if (!result.success) {
     return (
       <motion.div
@@ -114,27 +122,7 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
     visible: {
       y: 0,
       opacity: 1,
-      scale: 1,
-      transition: {
-        duration: 0.6,
-        ease: cubicBezier(0.25, 0.1, 0.25, 1)
-      }
-    }
-  }
-
-  const glowVariants = {
-    initial: { boxShadow: "0 0 0 rgba(59, 130, 246, 0)" },
-    animate: {
-      boxShadow: [
-        "0 0 0 rgba(59, 130, 246, 0)",
-        "0 0 20px rgba(59, 130, 246, 0.3)",
-        "0 0 0 rgba(59, 130, 246, 0)"
-      ],
-      transition: {
-        duration: 2,
-        repeat: Infinity,
-        ease: "easeInOut"
-      }
+      scale: 1
     }
   }
 
@@ -415,7 +403,7 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
           </CardHeader>
 
           <CardContent>
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
               {/* Original Image */}
               {originalImage && (
                 <motion.div
@@ -436,17 +424,18 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
                         ease: "easeInOut"
                       }}
                     />
-                    <div className="relative bg-white rounded-lg p-2 border-2 border-white/50 backdrop-blur-sm">
+                    <div className="relative bg-white rounded-lg p-3 border-2 border-white/50 backdrop-blur-sm shadow-lg">
                       <div className="relative aspect-square rounded-md overflow-hidden">
                         <Image
                           src={originalImage}
                           alt="Original satellite image"
                           fill
                           className="object-cover transition-transform duration-300 group-hover:scale-105"
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
                         <div className="absolute bottom-2 left-2 right-2">
-                          <Badge className="bg-blue-600 text-white">
+                          <Badge className="bg-blue-600 text-white text-xs">
                             <Satellite className="w-3 h-3 mr-1" />
                             Original
                           </Badge>
@@ -481,17 +470,22 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
                         ease: "easeInOut"
                       }}
                     />
-                    <div className="relative bg-white rounded-lg p-2 border-2 border-white/50 backdrop-blur-sm">
+                    <div className="relative bg-white rounded-lg p-3 border-2 border-white/50 backdrop-blur-sm shadow-lg">
                       <div className="relative aspect-square rounded-md overflow-hidden">
                         <Image
                           src={`data:image/png;base64,${result.prediction_images.unet_predicted}`}
                           alt="UNet segmentation prediction"
                           fill
                           className="object-cover transition-transform duration-300 group-hover:scale-105"
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                          onError={(e) => {
+                            console.error('UNet image failed to load:', e);
+                            e.currentTarget.style.display = 'none';
+                          }}
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
                         <div className="absolute bottom-2 left-2 right-2">
-                          <Badge className="bg-green-600 text-white">
+                          <Badge className="bg-green-600 text-white text-xs">
                             <Brain className="w-3 h-3 mr-1" />
                             U-Net
                           </Badge>
@@ -526,17 +520,22 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
                         ease: "easeInOut"
                       }}
                     />
-                    <div className="relative bg-white rounded-lg p-2 border-2 border-white/50 backdrop-blur-sm">
+                    <div className="relative bg-white rounded-lg p-3 border-2 border-white/50 backdrop-blur-sm shadow-lg">
                       <div className="relative aspect-square rounded-md overflow-hidden">
                         <Image
                           src={`data:image/png;base64,${result.prediction_images.deeplab_predicted}`}
                           alt="DeepLabV3+ segmentation prediction"
                           fill
                           className="object-cover transition-transform duration-300 group-hover:scale-105"
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                          onError={(e) => {
+                            console.error('DeepLab image failed to load:', e);
+                            e.currentTarget.style.display = 'none';
+                          }}
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
                         <div className="absolute bottom-2 left-2 right-2">
-                          <Badge className="bg-purple-600 text-white">
+                          <Badge className="bg-purple-600 text-white text-xs">
                             <Radar className="w-3 h-3 mr-1" />
                             DeepLab
                           </Badge>
@@ -572,17 +571,22 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
                         ease: "easeInOut"
                       }}
                     />
-                    <div className="relative bg-white rounded-lg p-2 border-2 border-yellow-200/70 backdrop-blur-sm">
+                    <div className="relative bg-white rounded-lg p-3 border-2 border-yellow-200/70 backdrop-blur-sm shadow-lg">
                       <div className="relative aspect-square rounded-md overflow-hidden">
                         <Image
                           src={`data:image/png;base64,${result.prediction_images.ensemble_predicted}`}
                           alt="Ensemble combined prediction"
                           fill
                           className="object-cover transition-transform duration-300 group-hover:scale-105"
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 25vw"
+                          onError={(e) => {
+                            console.error('Ensemble image failed to load:', e);
+                            e.currentTarget.style.display = 'none';
+                          }}
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
                         <div className="absolute bottom-2 left-2 right-2">
-                          <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0">
+                          <Badge className="bg-gradient-to-r from-yellow-500 to-orange-500 text-white border-0 text-xs">
                             <Sparkles className="w-3 h-3 mr-1" />
                             Ensemble
                           </Badge>
@@ -758,7 +762,7 @@ export function PredictionResults({ result, originalImage }: PredictionResultsPr
                         ))}
                       </Pie>
                       <Tooltip 
-                        formatter={(value: any) => [`${value}%`, 'Percentage']}
+                        formatter={(value: number) => [`${value}%`, 'Percentage']}
                         contentStyle={{
                           backgroundColor: 'rgba(255, 255, 255, 0.95)',
                           border: '1px solid #e2e8f0',

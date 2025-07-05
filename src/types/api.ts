@@ -1,4 +1,4 @@
-import { ModelName, ClassName } from "@/constants";
+import { ModelName } from "@/constants";
 
 export interface PredictionResult {
   success: boolean;

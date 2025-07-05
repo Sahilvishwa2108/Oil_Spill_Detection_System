@@ -4,7 +4,7 @@
  * Based on EXACT notebook specifications
  */
 
-import { EnsemblePredictionResult, PredictionResult } from '@/types/api';
+import { EnsemblePredictionResult } from '@/types/api';
 import { CLASS_INFO, DETECTION_THRESHOLDS, MODEL_CONFIG } from '@/constants';
 
 export interface ProcessedPredictionData {
@@ -114,7 +114,7 @@ export function processPredictionData(result: EnsemblePredictionResult): Process
   // STEP 7: Class breakdown (FROM BACKEND OR GENERATED)
   let classBreakdown;
   if (result.class_breakdown) {
-    classBreakdown = Object.entries(result.class_breakdown).map(([className, data]: [string, any]) => ({
+    classBreakdown = Object.entries(result.class_breakdown).map(([className, data]: [string, { percentage?: number; pixel_count?: number }]) => ({
       className,
       percentage: data.percentage || 0,
       pixelCount: data.pixel_count || 0,
@@ -200,8 +200,7 @@ function calculateRiskLevel(confidence: number, oilSpillPercentage?: number): "L
 
 function getClassColor(className: string): readonly number[] {
   // Convert className to match our enum values
-  const mappedName = className as any; // Temporary cast to handle the type issue
-  const classIndex = Object.values(CLASS_INFO.CLASS_NAMES).indexOf(mappedName);
+  const classIndex = Object.values(CLASS_INFO.CLASS_NAMES).indexOf(className as typeof CLASS_INFO.CLASS_NAMES[number]);
   return classIndex !== -1 ? CLASS_INFO.CLASS_COLORS[classIndex] : [128, 128, 128];
 }
 
