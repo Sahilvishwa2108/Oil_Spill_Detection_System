@@ -28,8 +28,11 @@ import {
   Cpu,
   Target,
   TrendingUp,
-  Sparkles
+  Sparkles,
+  Github,
+  BookOpen
 } from "lucide-react"
+import { ThemeToggle } from "@/components/theme-toggle"
 
 export default function Dashboard() {
   // State management
@@ -209,6 +212,56 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 dark:from-gray-900 dark:via-blue-950 dark:to-cyan-950">
+      {/* Navigation Header */}
+      <motion.header
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        className="sticky top-0 z-50 backdrop-blur-md bg-white/80 dark:bg-gray-900/80 border-b border-gray-200 dark:border-gray-800"
+      >
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                  Oil Spill Detection
+                </h1>
+              </motion.div>
+              <Badge variant="secondary" className="text-xs">
+                v1.0
+              </Badge>
+            </div>
+            
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => window.open('/about', '_self')}
+                className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+              >
+                <BookOpen className="w-4 h-4 mr-2" />
+                About
+              </Button>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => window.open('https://github.com/Sahilvishwa2108/Oil_Spill_Detection_System', '_blank')}
+                className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100"
+              >
+                <Github className="w-4 h-4 mr-2" />
+                GitHub
+              </Button>
+              
+              <ThemeToggle />
+            </div>
+          </div>
+        </div>
+      </motion.header>
+
       {/* Animated Background Effects */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <motion.div
