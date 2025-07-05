@@ -19,7 +19,6 @@ from PIL import Image
 from typing import Optional, List
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import base64
 from datetime import datetime
@@ -1117,7 +1116,6 @@ async def health_check():
     model2_available = os.path.exists("models/deeplab_final_model.keras")
 
     # Also check if they're loaded in memory
-    global model1, model2
     model1_loaded = model1 is not None
     model2_loaded = model2 is not None
 
@@ -1183,7 +1181,6 @@ async def get_environment_info():
 async def get_models_info():
     """Get information about available models"""
     # Check if models are actually loaded in memory
-    global model1, model2
     model1_loaded = model1 is not None
     model2_loaded = model2 is not None
 
@@ -1296,7 +1293,6 @@ async def predict(file: UploadFile = File(...), model_choice: str = "model1"):
 @app.post("/ensemble-predict", response_model=EnsemblePredictionResponse)
 async def ensemble_predict_endpoint(file: UploadFile = File(...)):
     """Run ensemble prediction with both models"""
-    start_time = datetime.now()
 
     try:
         # Validate file type
@@ -1364,9 +1360,6 @@ async def predict_detailed(file: UploadFile = File(...)):
 
         # Run ensemble prediction with detailed analysis
         ensemble_result = ensemble_predict_comprehensive(processed_image)
-
-        # Calculate total processing time
-        total_processing_time = (datetime.now() - start_time).total_seconds()
 
         # Clean up memory
         gc.collect()
@@ -1453,7 +1446,7 @@ if __name__ == "__main__":
     import uvicorn
 
     print("🚀 Starting Oil Spill Detection API server...")
-    print(f"📍 Server will be available at: http://localhost:8000")
-    print(f"📚 API documentation at: http://localhost:8000/docs")
+    print("📍 Server will be available at: http://localhost:8000")
+    print("📚 API documentation at: http://localhost:8000/docs")
 
     uvicorn.run(app, host="0.0.0.0", port=8000)
