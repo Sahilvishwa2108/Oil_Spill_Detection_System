@@ -29,7 +29,17 @@ import cv2
 # Import TensorFlow with proper error handling
 try:
     import tensorflow as tf
-
+    print(f"✅ TensorFlow {tf.__version__} imported successfully")
+    
+    # Check Keras version compatibility
+    try:
+        import keras
+        print(f"✅ Keras {keras.__version__} imported successfully")
+        keras_version = keras.__version__
+    except ImportError:
+        print("📊 Using TensorFlow bundled Keras")
+        keras_version = "bundled"
+    
     # Import Keras components conditionally - TensorFlow 2.x uses tf.keras
     try:
         from tensorflow.keras.models import model_from_json  # type: ignore
@@ -44,12 +54,12 @@ try:
     except ImportError:
         h5py = None
 
-    print("✅ TensorFlow imported successfully")
 except ImportError as e:
     print(f"❌ Failed to import TensorFlow: {e}")
     tf = None
     model_from_json = None
     h5py = None
+    keras_version = "unavailable"
 
 # Model configuration constants
 IMG_WIDTH = 256
@@ -286,11 +296,43 @@ def lazy_load_model1():
 
             model_path = "models/unet_final_model.keras"
             print(f"🔄 Loading UNet model from {model_path}")
+            print(f"📊 TensorFlow version: {tf.__version__}")
+            
+            # Check if we have Keras 3.x compatibility
+            try:
+                import keras
+                print(f"📊 Keras version: {keras.__version__}")
+            except ImportError:
+                print("📊 Using TensorFlow bundled Keras")
 
             if os.path.exists(model_path):
                 print(f"✅ Model file exists at {model_path}")
-                model1 = tf.keras.models.load_model(model_path, compile=False)
-                print("✅ Model 1 (U-Net) loaded successfully into memory")
+                
+                # Enhanced error handling for Keras compatibility
+                try:
+                    # First, try with minimal parameters for maximum compatibility
+                    model1 = tf.keras.models.load_model(model_path, compile=False)
+                    print("✅ Model 1 (U-Net) loaded successfully into memory")
+                except Exception as load_error:
+                    print(f"⚠️ Standard load attempt failed: {load_error}")
+                    
+                    # Try with SavedModel format fallback
+                    try:
+                        print("🔄 Attempting SavedModel format loading...")
+                        model1 = tf.saved_model.load(model_path)
+                        print("✅ Model 1 loaded as SavedModel")
+                    except Exception as savedmodel_error:
+                        print(f"⚠️ SavedModel loading failed: {savedmodel_error}")
+                        
+                        # Final fallback: try loading without any custom objects
+                        try:
+                            print("🔄 Attempting minimal loading...")
+                            import tensorflow.keras as keras_module
+                            model1 = keras_module.models.load_model(model_path, compile=False, custom_objects={})
+                            print("✅ Model 1 loaded with minimal parameters")
+                        except Exception as minimal_error:
+                            print(f"❌ All loading methods failed: {minimal_error}")
+                            raise minimal_error
             else:
                 print(f"❌ Model 1 not found at {model_path}")
                 models_dir = Path("models")
@@ -302,8 +344,8 @@ def lazy_load_model1():
                 return None
         except Exception as e:
             print(f"❌ Error loading model 1: {e}")
+            print(f"❌ Error type: {type(e).__name__}")
             import traceback
-
             traceback.print_exc()
             return None
     return model1
@@ -320,11 +362,43 @@ def lazy_load_model2():
 
             model_path = "models/deeplab_final_model.keras"
             print(f"🔄 Loading DeepLab model from {model_path}")
+            print(f"📊 TensorFlow version: {tf.__version__}")
+            
+            # Check if we have Keras 3.x compatibility
+            try:
+                import keras
+                print(f"📊 Keras version: {keras.__version__}")
+            except ImportError:
+                print("📊 Using TensorFlow bundled Keras")
 
             if os.path.exists(model_path):
                 print(f"✅ Model file exists at {model_path}")
-                model2 = tf.keras.models.load_model(model_path, compile=False)
-                print("✅ Model 2 (DeepLab) loaded successfully into memory")
+                
+                # Enhanced error handling for Keras compatibility
+                try:
+                    # First, try with minimal parameters for maximum compatibility
+                    model2 = tf.keras.models.load_model(model_path, compile=False)
+                    print("✅ Model 2 (DeepLab) loaded successfully into memory")
+                except Exception as load_error:
+                    print(f"⚠️ Standard load attempt failed: {load_error}")
+                    
+                    # Try with SavedModel format fallback
+                    try:
+                        print("🔄 Attempting SavedModel format loading...")
+                        model2 = tf.saved_model.load(model_path)
+                        print("✅ Model 2 loaded as SavedModel")
+                    except Exception as savedmodel_error:
+                        print(f"⚠️ SavedModel loading failed: {savedmodel_error}")
+                        
+                        # Final fallback: try loading without any custom objects
+                        try:
+                            print("🔄 Attempting minimal loading...")
+                            import tensorflow.keras as keras_module
+                            model2 = keras_module.models.load_model(model_path, compile=False, custom_objects={})
+                            print("✅ Model 2 loaded with minimal parameters")
+                        except Exception as minimal_error:
+                            print(f"❌ All loading methods failed: {minimal_error}")
+                            raise minimal_error
             else:
                 print(f"❌ Model 2 not found at {model_path}")
                 models_dir = Path("models")
@@ -336,8 +410,8 @@ def lazy_load_model2():
                 return None
         except Exception as e:
             print(f"❌ Error loading model 2: {e}")
+            print(f"❌ Error type: {type(e).__name__}")
             import traceback
-
             traceback.print_exc()
             return None
     return model2
@@ -1047,6 +1121,46 @@ async def health_check():
             "model2": model2_loaded or model2_available,
         },
     )
+
+
+@app.get("/debug/environment")
+async def get_environment_info():
+    """Get environment information for debugging"""
+    import sys
+    import platform
+    
+    env_info = {
+        "python_version": sys.version,
+        "platform": platform.platform(),
+        "tensorflow_version": tf.__version__ if tf else "Not available",
+        "keras_version": keras_version,
+        "numpy_version": np.__version__ if 'np' in globals() else "Not available",
+        "environment_vars": {
+            "TF_CPP_MIN_LOG_LEVEL": os.getenv("TF_CPP_MIN_LOG_LEVEL", "Not set"),
+            "TF_ENABLE_ONEDNN_OPTS": os.getenv("TF_ENABLE_ONEDNN_OPTS", "Not set"),
+        },
+        "model_files": {
+            "unet_model_exists": os.path.exists("models/unet_final_model.keras"),
+            "deeplab_model_exists": os.path.exists("models/deeplab_final_model.keras"),
+        },
+        "models_directory": list(Path("models").glob("*")) if Path("models").exists() else "Directory not found"
+    }
+    
+    # Add detailed model file info if they exist
+    for model_file in ["unet_final_model.keras", "deeplab_final_model.keras"]:
+        model_path = f"models/{model_file}"
+        if os.path.exists(model_path):
+            try:
+                stat = os.stat(model_path)
+                env_info[f"{model_file}_info"] = {
+                    "size_bytes": stat.st_size,
+                    "size_mb": round(stat.st_size / (1024 * 1024), 2),
+                    "last_modified": datetime.fromtimestamp(stat.st_mtime).isoformat()
+                }
+            except Exception as e:
+                env_info[f"{model_file}_info"] = f"Error reading file info: {e}"
+    
+    return env_info
 
 
 @app.get("/models/info")
