@@ -386,7 +386,7 @@ export default function Dashboard() {
                       <Progress value={modelData.f1_score ? modelData.f1_score * 100 : 93.56} className="h-2" />
                       <div className="flex justify-between text-xs text-muted-foreground">
                         <span>
-                          {modelData.name === 'UNet' ? 'Fast' : 'Accurate'} • {modelData.size_mb || 'N/A'} MB
+                        {String(modelData.name) === 'UNet' ? 'Fast' : 'Accurate'} • {modelData.size_mb || 'N/A'} MB
                         </span>
                         <span>{modelData.description}</span>
                       </div>
@@ -873,7 +873,7 @@ export default function Dashboard() {
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-medium">Architecture</span>
                               <span className="text-sm text-muted-foreground">
-                                {model.name === 'UNet' ? 'U-Net CNN' : 'DeepLabV3+ ResNet'}
+                                {String(model.name) === 'UNet' ? 'U-Net CNN' : 'DeepLabV3+ ResNet'}
                               </span>
                             </div>
                             <div className="flex items-center justify-between">
@@ -890,22 +890,22 @@ export default function Dashboard() {
                               <div className="flex justify-between text-sm">
                                 <span>F1 Score</span>
                                 <span className="font-medium">
-                                  {model.f1_score ? (model.f1_score * 100).toFixed(1) : (model.name === 'UNet' ? '93.5' : '94.2')}%
+                                  {model.f1_score ? (model.f1_score * 100).toFixed(1) : (String(model.name) === 'UNet' ? '93.5' : '94.2')}%
                                 </span>
                               </div>
                               <Progress 
-                                value={model.f1_score ? model.f1_score * 100 : (model.name === 'UNet' ? 93.5 : 94.2)} 
+                                value={model.f1_score ? model.f1_score * 100 : (String(model.name) === 'UNet' ? 93.5 : 94.2)} 
                                 className="h-2" 
                               />
                               
                               <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground pt-1">
                                 <div className="flex items-center gap-1">
                                   <div className="w-2 h-2 bg-green-500 rounded-full" />
-                                  <span>Precision: {model.name === 'UNet' ? '92.8' : '95.1'}%</span>
+                                  <span>Precision: {String(model.name) === 'UNet' ? '92.8' : '95.1'}%</span>
                                 </div>
                                 <div className="flex items-center gap-1">
                                   <div className="w-2 h-2 bg-blue-500 rounded-full" />
-                                  <span>Recall: {model.name === 'UNet' ? '94.2' : '93.4'}%</span>
+                                  <span>Recall: {String(model.name) === 'UNet' ? '94.2' : '93.4'}%</span>
                                 </div>
                               </div>
                             </div>

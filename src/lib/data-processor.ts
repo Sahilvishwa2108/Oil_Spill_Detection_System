@@ -64,18 +64,21 @@ export interface ProcessedPredictionData {
  * This function ensures ALL components get IDENTICAL data
  */
 export function processPredictionData(result: EnsemblePredictionResult): ProcessedPredictionData {
-  // STEP 1: Extract base data with safety checks
-  const ensembleConfidence = result.ensemble_confidence || 0;
-  const ensemblePrediction = result.ensemble_prediction || "No Oil Spill";
+  // STEP 1: Extract base data with safety checks (NEW BACKEND FORMAT)
+  const ensembleConfidence = (result.ensemble_confidence || result.confidence_percentage || 0) / 100;
+  const ensemblePrediction = result.ensemble_prediction || result.final_prediction || "No Oil Spill";
   const individualPredictions = result.individual_predictions || [];
   const totalTime = result.total_processing_time || 0;
+  
+  // Extract oil spill percentage from new backend format
+  const oilSpillPercentage = result.oil_spill_percentage || 0;
   
   // STEP 2: Process individual model results (STANDARDIZED)
   const individualResults = individualPredictions.map((pred) => ({
     modelName: getStandardizedModelName(pred.model_name),
     prediction: standardizePrediction(pred.prediction),
-    confidence: pred.confidence || 0,
-    confidencePercentage: Math.round((pred.confidence || 0) * 100),
+    confidence: (pred.confidence || 0) / 100, // Normalize to 0-1
+    confidencePercentage: Math.round(pred.confidence || 0),
     processingTime: pred.processing_time || 0
   }));
   
@@ -83,18 +86,43 @@ export function processPredictionData(result: EnsemblePredictionResult): Process
   const finalPrediction = standardizePrediction(ensemblePrediction);
   const confidencePercentage = Math.round(ensembleConfidence * 100);
   
-  // STEP 4: Risk assessment (CONSISTENT across all components)
-  const riskLevel = calculateRiskLevel(ensembleConfidence);
+  // STEP 4: Risk assessment (MATCHING BACKEND CALCULATION)
+  // Use the backend's risk level if available, otherwise calculate
+  let riskLevel: "LOW" | "MODERATE" | "HIGH" | "CRITICAL";
+  if (result.risk_level) {
+    riskLevel = result.risk_level as "LOW" | "MODERATE" | "HIGH" | "CRITICAL";
+  } else {
+    riskLevel = calculateRiskLevel(ensembleConfidence, oilSpillPercentage);
+  }
   const riskColor = getRiskColor(riskLevel);
   
-  // STEP 5: Oil spill analysis (1.0% threshold from notebook)
-  const oilSpillAnalysis = calculateOilSpillAnalysis(ensembleConfidence, finalPrediction);
+  // STEP 5: Oil spill analysis (FROM BACKEND DATA)
+  const oilSpillAnalysis = calculateOilSpillAnalysis(oilSpillPercentage, finalPrediction);
   
-  // STEP 6: Model agreement analysis
-  const modelAgreement = calculateModelAgreement(individualResults);
+  // STEP 6: Model agreement analysis (FROM BACKEND OR CALCULATED)
+  let modelAgreement;
+  if (result.model_agreement) {
+    modelAgreement = {
+      agreementPercentage: result.model_agreement.agreementPercentage || 0,
+      consensus: (result.model_agreement.agreementPercentage || 0) > 80,
+      conflictingModels: []
+    };
+  } else {
+    modelAgreement = calculateModelAgreement(individualResults);
+  }
   
-  // STEP 7: Class breakdown (from notebook specifications)
-  const classBreakdown = generateClassBreakdown(finalPrediction, ensembleConfidence);
+  // STEP 7: Class breakdown (FROM BACKEND OR GENERATED)
+  let classBreakdown;
+  if (result.class_breakdown) {
+    classBreakdown = Object.entries(result.class_breakdown).map(([className, data]: [string, any]) => ({
+      className,
+      percentage: data.percentage || 0,
+      pixelCount: data.pixel_count || 0,
+      color: getClassColor(className)
+    }));
+  } else {
+    classBreakdown = generateClassBreakdown(finalPrediction, ensembleConfidence);
+  }
   
   // STEP 8: Generate charts data (CONSISTENT format)
   const chartsData = generateChartsData(
@@ -153,11 +181,28 @@ function standardizePrediction(prediction?: string): "Oil Spill Detected" | "No 
     : "No Oil Spill";
 }
 
-function calculateRiskLevel(confidence: number): "LOW" | "MODERATE" | "HIGH" | "CRITICAL" {
+function calculateRiskLevel(confidence: number, oilSpillPercentage?: number): "LOW" | "MODERATE" | "HIGH" | "CRITICAL" {
+  // If we have oil spill percentage, use that for risk calculation (matches backend logic)
+  if (oilSpillPercentage !== undefined) {
+    if (oilSpillPercentage > 10) return 'CRITICAL';
+    if (oilSpillPercentage > 5) return 'HIGH';
+    if (oilSpillPercentage > 1) return 'MODERATE';
+    if (oilSpillPercentage > 0.1) return 'LOW';
+    return 'LOW';
+  }
+  
+  // Fallback to confidence-based calculation
   if (confidence >= DETECTION_THRESHOLDS.RISK_LEVELS.CRITICAL.threshold) return 'CRITICAL';
   if (confidence >= DETECTION_THRESHOLDS.RISK_LEVELS.HIGH.threshold) return 'HIGH';
   if (confidence >= DETECTION_THRESHOLDS.RISK_LEVELS.MODERATE.threshold) return 'MODERATE';
   return 'LOW';
+}
+
+function getClassColor(className: string): readonly number[] {
+  // Convert className to match our enum values
+  const mappedName = className as any; // Temporary cast to handle the type issue
+  const classIndex = Object.values(CLASS_INFO.CLASS_NAMES).indexOf(mappedName);
+  return classIndex !== -1 ? CLASS_INFO.CLASS_COLORS[classIndex] : [128, 128, 128];
 }
 
 function getRiskColor(level: string): string {
@@ -170,9 +215,9 @@ function getRiskColor(level: string): string {
   }
 }
 
-function calculateOilSpillAnalysis(confidence: number, prediction: string): ProcessedPredictionData['oilSpillAnalysis'] {
-  // Using 1.0% threshold from notebook (DETECTION_THRESHOLDS.OIL_SPILL_PIXEL_THRESHOLD = 0.01)
-  const pixelPercentage = confidence * 100;
+function calculateOilSpillAnalysis(oilSpillPercentage: number, prediction: string): ProcessedPredictionData['oilSpillAnalysis'] {
+  // Use the actual oil spill percentage from backend (already in percentage format)
+  const pixelPercentage = oilSpillPercentage;
   const isDetected = prediction === "Oil Spill Detected" && pixelPercentage > 1.0; // EXACT notebook logic
   
   let severity: "None" | "Light" | "Moderate" | "Severe" = "None";

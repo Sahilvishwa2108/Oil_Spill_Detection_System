@@ -16,6 +16,25 @@ export interface ModelPrediction {
   confidence: number;
   processing_time: number;
   prediction_mask?: string;
+  oil_spill_percentage?: number;
+  class_breakdown?: Record<string, {
+    pixel_count: number;
+    percentage: number;
+    class_id: number;
+  }>;
+}
+
+export interface ModelAgreement {
+  agreementPercentage: number;
+  agreementStatus: string;
+  unetDetected: boolean;
+  deeplabDetected: boolean;
+}
+
+export interface PredictionImages {
+  unet_predicted?: string;
+  deeplab_predicted?: string;
+  ensemble_predicted?: string;
 }
 
 export interface EnsemblePredictionResult {
@@ -26,6 +45,18 @@ export interface EnsemblePredictionResult {
   ensemble_mask?: string;
   total_processing_time: number;
   error?: string;
+  
+  // New fields from updated backend
+  prediction_images?: PredictionImages;
+  final_prediction?: string;
+  confidence_percentage?: number;
+  oil_spill_percentage?: number;
+  risk_level?: "LOW" | "MODERATE" | "HIGH" | "CRITICAL";
+  class_breakdown?: Record<string, {
+    percentage: number;
+    confidence?: string;
+  }>;
+  model_agreement?: ModelAgreement;
 }
 
 export interface ModelInfo {
