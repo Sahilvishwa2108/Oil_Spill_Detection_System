@@ -4,6 +4,11 @@ Downloads models on startup and loads them on-demand to reduce memory usage
 """
 
 import os
+
+# Configure environment for optimal performance BEFORE importing TensorFlow
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # Suppress TensorFlow logs
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"  # Disable oneDNN optimizations to avoid warnings
+
 import io
 import numpy as np
 import requests
@@ -42,9 +47,6 @@ except ImportError as e:
     tf = None
     model_from_json = None
     h5py = None
-
-# Configure environment for optimal performance
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # Suppress TensorFlow logs
 
 # Model configuration constants
 IMG_WIDTH = 256
