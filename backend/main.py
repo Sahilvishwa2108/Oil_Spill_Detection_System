@@ -7,7 +7,9 @@ import os
 
 # Configure environment for optimal performance BEFORE importing TensorFlow
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"  # Suppress TensorFlow logs
-os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"  # Disable oneDNN optimizations to avoid warnings
+os.environ["TF_ENABLE_ONEDNN_OPTS"] = (
+    "0"  # Disable oneDNN optimizations to avoid warnings
+)
 
 import io
 import numpy as np
@@ -27,6 +29,7 @@ import cv2
 # Import TensorFlow with proper error handling
 try:
     import tensorflow as tf
+
     # Import Keras components conditionally - TensorFlow 2.x uses tf.keras
     try:
         from tensorflow.keras.models import model_from_json  # type: ignore
@@ -56,12 +59,10 @@ IMG_CLASSES = 5
 
 # Model download configuration - Updated with new .keras models
 HUGGINGFACE_REPO_UNET = os.getenv(
-    "HUGGINGFACE_REPO_UNET", 
-    "sahilvishwa2108/oil-spill-unet"
+    "HUGGINGFACE_REPO_UNET", "sahilvishwa2108/oil-spill-unet"
 )
 HUGGINGFACE_REPO_DEEPLAB = os.getenv(
-    "HUGGINGFACE_REPO_DEEPLAB", 
-    "sahilvishwa2108/oil-spill-deeplab"
+    "HUGGINGFACE_REPO_DEEPLAB", "sahilvishwa2108/oil-spill-deeplab"
 )
 HUGGINGFACE_REPO = os.getenv(
     "HUGGINGFACE_REPO", "sahilvishwa2108/oil-spill-detection-models"
@@ -83,7 +84,7 @@ MODEL_PERFORMANCE = {
         "size_mb": 22.39,
         "description": "Lightweight segmentation model optimized for speed",
         "training_epochs": 50,
-        "parameters": "2.1M"
+        "parameters": "2.1M",
     },
     "deeplab_final_model.keras": {
         "name": "DeepLabV3+",
@@ -93,54 +94,42 @@ MODEL_PERFORMANCE = {
         "size_mb": 204.56,
         "description": "High-accuracy segmentation model with advanced features",
         "training_epochs": 50,
-        "parameters": "41.3M"
-    }
+        "parameters": "41.3M",
+    },
 }
 
 # Class information (EXACT from notebook)
 CLASS_INFO = {
-    "classes": {
-        "BACKGROUND": 0,
-        "OIL_SPILL": 1,
-        "SHIPS": 2,
-        "LOOKLIKE": 3,
-        "WAKES": 4
-    },
-    "class_names": [
-        "Background",
-        "Oil Spill", 
-        "Ships",
-        "Looklike",
-        "Wakes"
-    ],
+    "classes": {"BACKGROUND": 0, "OIL_SPILL": 1, "SHIPS": 2, "LOOKLIKE": 3, "WAKES": 4},
+    "class_names": ["Background", "Oil Spill", "Ships", "Looklike", "Wakes"],
     "class_colors": [
-        [0, 0, 0],         # Background (Black)
-        [0, 255, 255],     # Oil Spill (Cyan)
-        [255, 0, 0],       # Ships (Red)
-        [153, 76, 0],      # Looklike (Brown)
-        [0, 153, 0],       # Wakes (Green)
-    ]
+        [0, 0, 0],  # Background (Black)
+        [0, 255, 255],  # Oil Spill (Cyan)
+        [255, 0, 0],  # Ships (Red)
+        [153, 76, 0],  # Looklike (Brown)
+        [0, 153, 0],  # Wakes (Green)
+    ],
 }
 
 # Detection thresholds (EXACT from notebook)
 DETECTION_THRESHOLDS = {
-    "oil_spill_pixel_threshold": 0.01,    # 1.0% of pixels minimum (from notebook)
-    "confidence_threshold": 0.5,          # 50% confidence minimum
+    "oil_spill_pixel_threshold": 0.01,  # 1.0% of pixels minimum (from notebook)
+    "confidence_threshold": 0.5,  # 50% confidence minimum
     "risk_levels": {
         "LOW": {"threshold": 0.3, "color": "green"},
         "MODERATE": {"threshold": 0.65, "color": "yellow"},
         "HIGH": {"threshold": 0.8, "color": "orange"},
-        "CRITICAL": {"threshold": 0.95, "color": "red"}
-    }
+        "CRITICAL": {"threshold": 0.95, "color": "red"},
+    },
 }
 
 # Define the same color map as used in the notebook
 COLOR_MAP = [
-    [0, 0, 0],          # Class 0: Background (Black)
-    [0, 255, 255],      # Class 1: Oil Spill (Cyan)
-    [255, 0, 0],        # Class 2: Ships (Red)
-    [153, 76, 0],       # Class 3: Looklike (Brown)
-    [0, 153, 0],        # Class 4: Wakes (Green)
+    [0, 0, 0],  # Class 0: Background (Black)
+    [0, 255, 255],  # Class 1: Oil Spill (Cyan)
+    [255, 0, 0],  # Class 2: Ships (Red)
+    [153, 76, 0],  # Class 3: Looklike (Brown)
+    [0, 153, 0],  # Class 4: Wakes (Green)
 ]
 
 
@@ -173,7 +162,7 @@ def download_model_if_needed(filename: str) -> bool:
         response = requests.get(url, stream=True)
         response.raise_for_status()
 
-        total_size = int(response.headers.get('content-length', 0))
+        total_size = int(response.headers.get("content-length", 0))
         downloaded = 0
 
         with open(model_path, "wb") as f:
@@ -240,7 +229,7 @@ class PredictionResponse(BaseModel):
     model_used: Optional[str] = None
     error: Optional[str] = None
     prediction_mask: Optional[str] = None
-    
+
     # Additional data for detailed analysis
     oil_spill_percentage: Optional[float] = None
     class_breakdown: Optional[dict] = None
@@ -269,7 +258,7 @@ class EnsemblePredictionResponse(BaseModel):
     ensemble_mask: Optional[str] = None
     total_processing_time: Optional[float] = None
     error: Optional[str] = None
-    
+
     # New fields to match frontend expectations
     prediction_images: Optional[dict] = None  # Contains base64 encoded mask images
     final_prediction: Optional[str] = None
@@ -314,6 +303,7 @@ def lazy_load_model1():
         except Exception as e:
             print(f"❌ Error loading model 1: {e}")
             import traceback
+
             traceback.print_exc()
             return None
     return model1
@@ -347,6 +337,7 @@ def lazy_load_model2():
         except Exception as e:
             print(f"❌ Error loading model 2: {e}")
             import traceback
+
             traceback.print_exc()
             return None
     return model2
@@ -379,7 +370,9 @@ def predict_oil_spill(image_array, model):
         # Make prediction
         prediction = model.predict(image_array, verbose=0)
         print(f"Raw prediction shape: {prediction.shape}")
-        print(f"Prediction stats - Min: {np.min(prediction):.4f}, Max: {np.max(prediction):.4f}, Mean: {np.mean(prediction):.4f}")
+        print(
+            f"Prediction stats - Min: {np.min(prediction):.4f}, Max: {np.max(prediction):.4f}, Mean: {np.mean(prediction):.4f}"
+        )
 
         # Process prediction based on output shape - following notebook logic
         if (
@@ -387,13 +380,15 @@ def predict_oil_spill(image_array, model):
         ):  # Multi-class segmentation (5 classes: Background, Oil Spill, Ships, Look-alike, Wakes)
             # Use argmax to get predicted classes - same as notebook
             predicted_classes = np.argmax(prediction, axis=3)[0]  # Shape: (256, 256)
-            
+
             # Get confidence map and probability scores for each class
             confidence_map = np.max(prediction, axis=3)[0]  # Shape: (256, 256)
             mean_confidence = float(np.mean(confidence_map))
-            
+
             # Calculate class probabilities (softmax scores)
-            class_probabilities = np.mean(prediction[0], axis=(0, 1))  # Average across spatial dimensions
+            class_probabilities = np.mean(
+                prediction[0], axis=(0, 1)
+            )  # Average across spatial dimensions
 
             # Count pixels for each class (following notebook class definitions)
             class_counts = {i: np.sum(predicted_classes == i) for i in range(5)}
@@ -404,28 +399,36 @@ def predict_oil_spill(image_array, model):
             oil_spill_percentage = oil_spill_pixels / total_pixels
 
             print(f"Class distribution: {class_counts}")
-            print(f"Oil spill pixels: {oil_spill_pixels} ({oil_spill_percentage*100:.2f}%)")
+            print(
+                f"Oil spill pixels: {oil_spill_pixels} ({oil_spill_percentage*100:.2f}%)"
+            )
             print(f"Mean confidence: {mean_confidence:.4f}")
             print(f"Class probabilities: {class_probabilities}")
 
             # Determine if oil spill is detected - using consistent threshold from constants
             OIL_SPILL_THRESHOLD = DETECTION_THRESHOLDS["oil_spill_pixel_threshold"]
-            
+
             if oil_spill_percentage > OIL_SPILL_THRESHOLD:
                 predicted_class = "Oil Spill Detected"
                 # Calculate confidence based on oil spill percentage and model confidence
                 # Higher oil spill percentage = higher confidence
                 base_confidence = oil_spill_percentage * 100  # Convert to percentage
-                model_confidence_boost = mean_confidence * 30  # Model confidence contribution
-                confidence = float(min(95, max(65, base_confidence + model_confidence_boost)))
+                model_confidence_boost = (
+                    mean_confidence * 30
+                )  # Model confidence contribution
+                confidence = float(
+                    min(95, max(65, base_confidence + model_confidence_boost))
+                )
             else:
                 predicted_class = "No Oil Spill"
                 # For no oil spill, confidence is based on clean water percentage
                 clean_confidence = (1.0 - oil_spill_percentage) * mean_confidence * 100
                 confidence = float(min(95, max(60, clean_confidence)))
 
-            print(f"Final prediction: {predicted_class} (confidence: {confidence:.1f}%)")
-            
+            print(
+                f"Final prediction: {predicted_class} (confidence: {confidence:.1f}%)"
+            )
+
             # Return additional data for frontend
             prediction_data = {
                 "predicted_class": predicted_class,
@@ -435,9 +438,9 @@ def predict_oil_spill(image_array, model):
                 "class_probabilities": class_probabilities.tolist(),
                 "mean_confidence": mean_confidence * 100,
                 "predicted_mask": predicted_classes,
-                "confidence_map": confidence_map
+                "confidence_map": confidence_map,
             }
-            
+
             return prediction_data
 
         elif (
@@ -447,31 +450,37 @@ def predict_oil_spill(image_array, model):
             mask = prediction[0, :, :, 0]
             confidence = float(np.mean(mask)) * 100
             predicted_class = (
-                "Oil Spill Detected" if confidence > DETECTION_THRESHOLDS["confidence_threshold"] * 100 else "No Oil Spill"
+                "Oil Spill Detected"
+                if confidence > DETECTION_THRESHOLDS["confidence_threshold"] * 100
+                else "No Oil Spill"
             )
-            
+
             prediction_data = {
                 "predicted_class": predicted_class,
                 "confidence": confidence,
                 "oil_spill_percentage": confidence,
                 "predicted_mask": (mask > 0.5).astype(int),
-                "confidence_map": mask
+                "confidence_map": mask,
             }
-            
+
             return prediction_data
 
         else:  # Classification output
             confidence = float(np.max(prediction)) * 100
             predicted_class = (
-                "Oil Spill Detected" if confidence > DETECTION_THRESHOLDS["confidence_threshold"] * 100 else "No Oil Spill"
+                "Oil Spill Detected"
+                if confidence > DETECTION_THRESHOLDS["confidence_threshold"] * 100
+                else "No Oil Spill"
             )
-            
+
             prediction_data = {
                 "predicted_class": predicted_class,
                 "confidence": confidence,
-                "oil_spill_percentage": confidence if predicted_class == "Oil Spill Detected" else 0
+                "oil_spill_percentage": (
+                    confidence if predicted_class == "Oil Spill Detected" else 0
+                ),
             }
-            
+
             return prediction_data
 
     except Exception as e:
@@ -495,10 +504,13 @@ def fallback_predict_oil_spill(image_array, model_name="U-Net"):
 
         # Add some randomness to make it feel more realistic
         import random
+
         confidence += random.uniform(-0.1, 0.1)
         confidence = max(0.1, min(0.9, confidence))
 
-        print(f"⚠️ Using fallback prediction: {prediction} (confidence: {confidence:.3f})")
+        print(
+            f"⚠️ Using fallback prediction: {prediction} (confidence: {confidence:.3f})"
+        )
         return prediction, confidence
 
     except Exception as e:
@@ -529,12 +541,12 @@ def apply_color_map(mask, color_map):
 def mask_to_base64(mask, color_map=None, is_confidence_map=False):
     """
     Convert prediction mask to base64 encoded image
-    
+
     Args:
         mask: 2D numpy array (predicted classes or confidence values)
         color_map: Optional color mapping for class visualization
         is_confidence_map: Whether the mask is a confidence map (0-1 values)
-    
+
     Returns:
         Base64 encoded image string
     """
@@ -550,19 +562,21 @@ def mask_to_base64(mask, color_map=None, is_confidence_map=False):
             colored_mask = apply_color_map(mask.astype(int), color_map)
         else:
             # Grayscale mask
-            mask_normalized = ((mask - mask.min()) / (mask.max() - mask.min()) * 255).astype(np.uint8)
+            mask_normalized = (
+                (mask - mask.min()) / (mask.max() - mask.min()) * 255
+            ).astype(np.uint8)
             colored_mask = cv2.cvtColor(mask_normalized, cv2.COLOR_GRAY2RGB)
-        
+
         # Convert to PIL Image
         pil_image = Image.fromarray(colored_mask)
-        
+
         # Convert to base64
         buffered = io.BytesIO()
         pil_image.save(buffered, format="PNG")
         img_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
-        
+
         return img_base64  # Return just the base64 string, not the data URL
-        
+
     except Exception as e:
         print(f"Error converting mask to base64: {e}")
         return None
@@ -576,7 +590,7 @@ def calculate_risk_level(oil_spill_percentage, confidence):
     if oil_spill_percentage > 10:
         return "CRITICAL"
     elif oil_spill_percentage > 5:
-        return "HIGH" 
+        return "HIGH"
     elif oil_spill_percentage > 1:
         return "MODERATE"
     elif oil_spill_percentage > 0.1:
@@ -591,15 +605,15 @@ def create_class_breakdown(class_counts, total_pixels):
     """
     class_names = CLASS_INFO["class_names"]
     breakdown = {}
-    
+
     for class_id, count in class_counts.items():
         percentage = (count / total_pixels) * 100
         breakdown[class_names[class_id]] = {
             "pixel_count": int(count),
             "percentage": round(percentage, 2),
-            "class_id": class_id
+            "class_id": class_id,
         }
-    
+
     return breakdown
 
 
@@ -662,6 +676,7 @@ def generate_prediction_mask(image_array, model, prediction_threshold=0.5):
     except Exception as e:
         print(f"Error generating mask: {e}")
         import traceback
+
         traceback.print_exc()
         return None
 
@@ -730,6 +745,7 @@ def fallback_generate_mask(image_array, prediction_result):
     except Exception as e:
         print(f"Error generating fallback mask: {e}")
         import traceback
+
         traceback.print_exc()
         return None
 
@@ -742,11 +758,11 @@ def ensemble_predict_comprehensive(image_array):
     start_time = datetime.now()
     individual_results = []
     individual_predictions = []
-    
-    # Model 1 (U-Net) prediction  
+
+    # Model 1 (U-Net) prediction
     model1_start = datetime.now()
     model1_instance = lazy_load_model1()
-    
+
     if model1_instance is not None:
         try:
             prediction_data = predict_oil_spill(image_array, model1_instance)
@@ -758,29 +774,31 @@ def ensemble_predict_comprehensive(image_array):
                 unet_result = {
                     "predicted_class": predicted_class,
                     "confidence": confidence,
-                    "oil_spill_percentage": confidence if predicted_class == "Oil Spill Detected" else 0
+                    "oil_spill_percentage": (
+                        confidence if predicted_class == "Oil Spill Detected" else 0
+                    ),
                 }
         except Exception as e:
             print(f"UNet prediction failed: {e}")
             unet_result = {
                 "predicted_class": "Analysis Failed",
                 "confidence": 0,
-                "oil_spill_percentage": 0
+                "oil_spill_percentage": 0,
             }
     else:
         unet_result = {
-            "predicted_class": "Model Not Available", 
+            "predicted_class": "Model Not Available",
             "confidence": 0,
-            "oil_spill_percentage": 0
+            "oil_spill_percentage": 0,
         }
-    
+
     model1_time = (datetime.now() - model1_start).total_seconds()
-    
+
     # Generate UNet mask image
     unet_mask_image = None
     if "predicted_mask" in unet_result:
         unet_mask_image = mask_to_base64(unet_result["predicted_mask"], COLOR_MAP)
-    
+
     individual_results.append(unet_result)
     individual_predictions.append(
         ModelPrediction(
@@ -790,17 +808,20 @@ def ensemble_predict_comprehensive(image_array):
             processing_time=model1_time,
             prediction_mask=unet_mask_image,
             oil_spill_percentage=unet_result.get("oil_spill_percentage", 0),
-            class_breakdown=create_class_breakdown(
-                unet_result.get("class_counts", {}), 
-                IMG_WIDTH * IMG_HEIGHT
-            ) if "class_counts" in unet_result else None
+            class_breakdown=(
+                create_class_breakdown(
+                    unet_result.get("class_counts", {}), IMG_WIDTH * IMG_HEIGHT
+                )
+                if "class_counts" in unet_result
+                else None
+            ),
         )
     )
-    
+
     # Model 2 (DeepLabV3+) prediction
     model2_start = datetime.now()
     model2_instance = lazy_load_model2()
-    
+
     if model2_instance is not None:
         try:
             prediction_data = predict_oil_spill(image_array, model2_instance)
@@ -812,29 +833,31 @@ def ensemble_predict_comprehensive(image_array):
                 deeplab_result = {
                     "predicted_class": predicted_class,
                     "confidence": confidence,
-                    "oil_spill_percentage": confidence if predicted_class == "Oil Spill Detected" else 0
+                    "oil_spill_percentage": (
+                        confidence if predicted_class == "Oil Spill Detected" else 0
+                    ),
                 }
         except Exception as e:
             print(f"DeepLabV3+ prediction failed: {e}")
             deeplab_result = {
                 "predicted_class": "Analysis Failed",
                 "confidence": 0,
-                "oil_spill_percentage": 0
+                "oil_spill_percentage": 0,
             }
     else:
         deeplab_result = {
             "predicted_class": "Model Not Available",
-            "confidence": 0, 
-            "oil_spill_percentage": 0
+            "confidence": 0,
+            "oil_spill_percentage": 0,
         }
-    
+
     model2_time = (datetime.now() - model2_start).total_seconds()
-    
+
     # Generate DeepLab mask image
     deeplab_mask_image = None
     if "predicted_mask" in deeplab_result:
         deeplab_mask_image = mask_to_base64(deeplab_result["predicted_mask"], COLOR_MAP)
-    
+
     individual_results.append(deeplab_result)
     individual_predictions.append(
         ModelPrediction(
@@ -844,55 +867,65 @@ def ensemble_predict_comprehensive(image_array):
             processing_time=model2_time,
             prediction_mask=deeplab_mask_image,
             oil_spill_percentage=deeplab_result.get("oil_spill_percentage", 0),
-            class_breakdown=create_class_breakdown(
-                deeplab_result.get("class_counts", {}),
-                IMG_WIDTH * IMG_HEIGHT
-            ) if "class_counts" in deeplab_result else None
+            class_breakdown=(
+                create_class_breakdown(
+                    deeplab_result.get("class_counts", {}), IMG_WIDTH * IMG_HEIGHT
+                )
+                if "class_counts" in deeplab_result
+                else None
+            ),
         )
     )
-    
+
     # Ensemble decision (weighted average)
     unet_weight = 0.4  # UNet is faster but less accurate
     deeplab_weight = 0.6  # DeepLabV3+ is more accurate
-    
+
     # Calculate ensemble prediction
     unet_oil_percentage = unet_result.get("oil_spill_percentage", 0)
     deeplab_oil_percentage = deeplab_result.get("oil_spill_percentage", 0)
-    
-    ensemble_oil_percentage = (unet_oil_percentage * unet_weight + 
-                              deeplab_oil_percentage * deeplab_weight)
-    
-    ensemble_confidence = (unet_result.get("confidence", 0) * unet_weight + 
-                          deeplab_result.get("confidence", 0) * deeplab_weight)
-    
+
+    ensemble_oil_percentage = (
+        unet_oil_percentage * unet_weight + deeplab_oil_percentage * deeplab_weight
+    )
+
+    ensemble_confidence = (
+        unet_result.get("confidence", 0) * unet_weight
+        + deeplab_result.get("confidence", 0) * deeplab_weight
+    )
+
     # Determine final prediction based on ensemble
-    oil_spill_threshold = DETECTION_THRESHOLDS["oil_spill_pixel_threshold"] * 100  # Convert to percentage
-    
+    oil_spill_threshold = (
+        DETECTION_THRESHOLDS["oil_spill_pixel_threshold"] * 100
+    )  # Convert to percentage
+
     if ensemble_oil_percentage > oil_spill_threshold:
         ensemble_prediction = "Oil Spill Detected"
     else:
         ensemble_prediction = "No Oil Spill"
-    
+
     # Calculate model agreement
     unet_detected = "oil spill" in unet_result["predicted_class"].lower()
     deeplab_detected = "oil spill" in deeplab_result["predicted_class"].lower()
-    
+
     if unet_detected == deeplab_detected:
         agreement_percentage = 100.0
         agreement_status = "Complete Agreement"
     else:
         # Partial agreement based on confidence similarity
-        conf_diff = abs(unet_result.get("confidence", 0) - deeplab_result.get("confidence", 0))
+        conf_diff = abs(
+            unet_result.get("confidence", 0) - deeplab_result.get("confidence", 0)
+        )
         agreement_percentage = max(50, 100 - (conf_diff * 100))
         agreement_status = "Partial Agreement"
-    
+
     model_agreement = {
         "agreementPercentage": agreement_percentage,
         "agreementStatus": agreement_status,
         "unetDetected": unet_detected,
-        "deeplabDetected": deeplab_detected
+        "deeplabDetected": deeplab_detected,
     }
-    
+
     # Create ensemble mask (simple average for visualization)
     ensemble_mask_image = None
     if "predicted_mask" in unet_result and "predicted_mask" in deeplab_result:
@@ -900,14 +933,16 @@ def ensemble_predict_comprehensive(image_array):
             # Simple ensemble: average the masks
             unet_mask = unet_result["predicted_mask"].astype(float)
             deeplab_mask = deeplab_result["predicted_mask"].astype(float)
-            ensemble_mask = ((unet_mask * unet_weight + deeplab_mask * deeplab_weight)).astype(int)
+            ensemble_mask = (
+                (unet_mask * unet_weight + deeplab_mask * deeplab_weight)
+            ).astype(int)
             ensemble_mask_image = mask_to_base64(ensemble_mask, COLOR_MAP)
         except Exception as e:
             print(f"Error creating ensemble mask: {e}")
-    
+
     # Calculate risk level
     risk_level = calculate_risk_level(ensemble_oil_percentage, ensemble_confidence)
-    
+
     # Create comprehensive class breakdown
     ensemble_class_breakdown = {}
     if individual_results:
@@ -916,26 +951,28 @@ def ensemble_predict_comprehensive(image_array):
             valid_results = 0
             for result in individual_results:
                 if "class_counts" in result:
-                    breakdown = create_class_breakdown(result["class_counts"], IMG_WIDTH * IMG_HEIGHT)
+                    breakdown = create_class_breakdown(
+                        result["class_counts"], IMG_WIDTH * IMG_HEIGHT
+                    )
                     if class_name in breakdown:
                         avg_percentage += breakdown[class_name]["percentage"]
                         valid_results += 1
-            
+
             if valid_results > 0:
                 ensemble_class_breakdown[class_name] = {
                     "percentage": round(avg_percentage / valid_results, 2),
-                    "confidence": "High" if valid_results == 2 else "Medium"
+                    "confidence": "High" if valid_results == 2 else "Medium",
                 }
-    
+
     # Prediction images for frontend
     prediction_images = {
         "unet_predicted": unet_mask_image,
-        "deeplab_predicted": deeplab_mask_image, 
-        "ensemble_predicted": ensemble_mask_image
+        "deeplab_predicted": deeplab_mask_image,
+        "ensemble_predicted": ensemble_mask_image,
     }
-    
+
     total_processing_time = (datetime.now() - start_time).total_seconds()
-    
+
     return {
         "individual_predictions": individual_predictions,
         "ensemble_prediction": ensemble_prediction,
@@ -947,7 +984,7 @@ def ensemble_predict_comprehensive(image_array):
         "class_breakdown": ensemble_class_breakdown,
         "model_agreement": model_agreement,
         "prediction_images": prediction_images,
-        "total_processing_time": total_processing_time
+        "total_processing_time": total_processing_time,
     }
 
     # Ensemble logic - average confidences and majority vote
@@ -974,7 +1011,9 @@ def ensemble_predict_comprehensive(image_array):
         ensemble_confidence = max(0.5, avg_confidence - 0.1)
 
     # Use first model's mask as ensemble mask (simplified)
-    ensemble_mask = individual_predictions[0].prediction_mask if individual_predictions else None
+    ensemble_mask = (
+        individual_predictions[0].prediction_mask if individual_predictions else None
+    )
 
     return (
         individual_predictions,
@@ -990,12 +1029,12 @@ async def health_check():
     # Check if model files exist and are accessible
     model1_available = os.path.exists("models/unet_final_model.keras")
     model2_available = os.path.exists("models/deeplab_final_model.keras")
-    
+
     # Also check if they're loaded in memory
     global model1, model2
     model1_loaded = model1 is not None
     model2_loaded = model2 is not None
-    
+
     # Consider models "ready" if files exist, even if not loaded in memory
     # This gives better UX as models are loaded on-demand
     status = "healthy" if (model1_available and model2_available) else "unhealthy"
@@ -1003,7 +1042,10 @@ async def health_check():
     return HealthResponse(
         status=status,
         timestamp=datetime.now().isoformat(),
-        models_loaded={"model1": model1_loaded or model1_available, "model2": model2_loaded or model2_available},
+        models_loaded={
+            "model1": model1_loaded or model1_available,
+            "model2": model2_loaded or model2_available,
+        },
     )
 
 
@@ -1019,8 +1061,10 @@ async def get_models_info():
     for model_file, performance in MODEL_PERFORMANCE.items():
         model_exists = os.path.exists(f"models/{model_file}")
         # Correct mapping: unet_final_model.keras -> model1, deeplab_final_model.keras -> model2
-        is_loaded = (model1_loaded if "unet_final_model.keras" == model_file else model2_loaded)
-        
+        is_loaded = (
+            model1_loaded if "unet_final_model.keras" == model_file else model2_loaded
+        )
+
         models_info[model_file] = {
             "name": performance["name"],
             "architecture": performance["architecture"],
@@ -1032,13 +1076,15 @@ async def get_models_info():
             "parameters": performance.get("parameters", "N/A"),
             "loaded": is_loaded,
             "file_exists": model_exists,
-            "status": "loaded" if is_loaded else ("ready" if model_exists else "missing")
+            "status": (
+                "loaded" if is_loaded else ("ready" if model_exists else "missing")
+            ),
         }
 
     return {
         "models": models_info,
         "ensemble_advantage": "Combining both models provides better accuracy and robustness",
-        "total_models": len(models_info)
+        "total_models": len(models_info),
     }
 
 
@@ -1070,7 +1116,9 @@ async def predict(file: UploadFile = File(...), model_choice: str = "model1"):
         if model is None:
             print(f"⚠️ Model {model_choice} failed to load, using fallback prediction")
             # Use fallback prediction instead of failing
-            predicted_class, confidence = fallback_predict_oil_spill(processed_image, model_name)
+            predicted_class, confidence = fallback_predict_oil_spill(
+                processed_image, model_name
+            )
             mask = fallback_generate_mask(processed_image, predicted_class)
         else:
             # Make prediction with loaded model
@@ -1098,7 +1146,9 @@ async def predict(file: UploadFile = File(...), model_choice: str = "model1"):
         # Fallback prediction if model prediction fails
         try:
             print(f"⚠️ Error during prediction: {e}. Attempting fallback prediction...")
-            predicted_class, confidence = fallback_predict_oil_spill(processed_image, model_name)
+            predicted_class, confidence = fallback_predict_oil_spill(
+                processed_image, model_name
+            )
             mask = fallback_generate_mask(processed_image, predicted_class)
 
             return PredictionResponse(
@@ -1129,7 +1179,7 @@ async def ensemble_predict_endpoint(file: UploadFile = File(...)):
 
         # Preprocess image
         processed_image = preprocess_image(image)
-        
+
         # Run ensemble prediction
         ensemble_result = ensemble_predict_comprehensive(processed_image)
 
@@ -1144,7 +1194,9 @@ async def ensemble_predict_endpoint(file: UploadFile = File(...)):
             individual_predictions=ensemble_result["individual_predictions"],
             ensemble_prediction=ensemble_result["ensemble_prediction"],
             ensemble_confidence=round(ensemble_result["ensemble_confidence"], 4),
-            ensemble_mask=ensemble_result["prediction_images"].get("ensemble_predicted"),
+            ensemble_mask=ensemble_result["prediction_images"].get(
+                "ensemble_predicted"
+            ),
             total_processing_time=round(ensemble_result["total_processing_time"], 2),
             # New fields matching frontend expectations
             prediction_images=ensemble_result["prediction_images"],
@@ -1153,7 +1205,7 @@ async def ensemble_predict_endpoint(file: UploadFile = File(...)):
             oil_spill_percentage=round(ensemble_result["oil_spill_percentage"], 2),
             risk_level=ensemble_result["risk_level"],
             class_breakdown=ensemble_result["class_breakdown"],
-            model_agreement=ensemble_result["model_agreement"]
+            model_agreement=ensemble_result["model_agreement"],
         )
 
     except HTTPException:
@@ -1179,7 +1231,7 @@ async def predict_detailed(file: UploadFile = File(...)):
 
         # Preprocess image
         processed_image = preprocess_image(image)
-        
+
         # Run ensemble prediction with detailed analysis
         ensemble_result = ensemble_predict_comprehensive(processed_image)
 
@@ -1194,7 +1246,9 @@ async def predict_detailed(file: UploadFile = File(...)):
             individual_predictions=ensemble_result["individual_predictions"],
             ensemble_prediction=ensemble_result["ensemble_prediction"],
             ensemble_confidence=round(ensemble_result["ensemble_confidence"], 4),
-            ensemble_mask=ensemble_result["prediction_images"].get("ensemble_predicted"),
+            ensemble_mask=ensemble_result["prediction_images"].get(
+                "ensemble_predicted"
+            ),
             total_processing_time=round(ensemble_result["total_processing_time"], 2),
             # New fields matching frontend expectations
             prediction_images=ensemble_result["prediction_images"],
@@ -1203,7 +1257,7 @@ async def predict_detailed(file: UploadFile = File(...)):
             oil_spill_percentage=round(ensemble_result["oil_spill_percentage"], 2),
             risk_level=ensemble_result["risk_level"],
             class_breakdown=ensemble_result["class_breakdown"],
-            model_agreement=ensemble_result["model_agreement"]
+            model_agreement=ensemble_result["model_agreement"],
         )
 
     except HTTPException:
@@ -1238,41 +1292,38 @@ async def test_image_endpoint():
         from PIL import Image
         import io
         import base64
-        
+
         # Create a simple test image (red square)
         test_array = np.zeros((256, 256, 3), dtype=np.uint8)
         test_array[50:200, 50:200] = [255, 0, 0]  # Red square
-        
+
         # Convert to PIL Image
-        test_image = Image.fromarray(test_array, 'RGB')
-        
+        test_image = Image.fromarray(test_array, "RGB")
+
         # Convert to base64
         buffer = io.BytesIO()
-        test_image.save(buffer, format='PNG')
+        test_image.save(buffer, format="PNG")
         buffer.seek(0)
-        base64_str = base64.b64encode(buffer.getvalue()).decode('utf-8')
-        
+        base64_str = base64.b64encode(buffer.getvalue()).decode("utf-8")
+
         return {
             "success": True,
             "test_image": base64_str,
             "image_info": {
                 "size": test_image.size,
                 "mode": test_image.mode,
-                "base64_length": len(base64_str)
-            }
+                "base64_length": len(base64_str),
+            },
         }
     except Exception as e:
-        return {
-            "success": False,
-            "error": str(e)
-        }
+        return {"success": False, "error": str(e)}
 
 
 if __name__ == "__main__":
     import uvicorn
-    
+
     print("🚀 Starting Oil Spill Detection API server...")
     print(f"📍 Server will be available at: http://localhost:8000")
     print(f"📚 API documentation at: http://localhost:8000/docs")
-    
+
     uvicorn.run(app, host="0.0.0.0", port=8000)
